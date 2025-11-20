@@ -30,22 +30,24 @@ export async function PUT(
     const supabase = createServerClient()
 
     // Update the post
+    const updateData: any = {
+      headline,
+      content: content || null,
+      is_pinned: is_pinned || false,
+      updated_at: new Date().toISOString(),
+    }
+
     const { error: postError } = await supabase
       .from('stag_info_posts')
-      .update({
-        headline,
-        content: content || null,
-        is_pinned: is_pinned || false,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', postId)
+      .update(updateData)
+      .eq('id', postId as any)
 
     if (postError) {
       return NextResponse.json({ error: 'Failed to update post' }, { status: 500 })
     }
 
     // Delete existing links
-    await supabase.from('stag_info_links').delete().eq('post_id', postId)
+    await supabase.from('stag_info_links').delete().eq('post_id', postId as any)
 
     // Create new links if provided
     if (links && links.length > 0) {
@@ -86,10 +88,10 @@ export async function DELETE(
     const supabase = createServerClient()
 
     // Delete links first (cascade should handle this, but being explicit)
-    await supabase.from('stag_info_links').delete().eq('post_id', postId)
+    await supabase.from('stag_info_links').delete().eq('post_id', postId as any)
 
     // Delete the post
-    const { error } = await supabase.from('stag_info_posts').delete().eq('id', postId)
+    const { error } = await supabase.from('stag_info_posts').delete().eq('id', postId as any)
 
     if (error) {
       return NextResponse.json({ error: 'Failed to delete post' }, { status: 500 })

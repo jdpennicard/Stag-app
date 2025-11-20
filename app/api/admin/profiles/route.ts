@@ -37,6 +37,9 @@ export async function GET() {
       return NextResponse.json([])
     }
 
+    // Cast profiles to any[] to avoid TypeScript errors
+    const profilesArray: any[] = profiles as any[]
+
     // Fetch all payments
     const { data: payments, error: paymentsError } = await supabase
       .from('payments')
@@ -47,12 +50,15 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch payments' }, { status: 500 })
     }
 
+    // Cast payments to any[] to avoid TypeScript errors
+    const paymentsArray: any[] = (payments || []) as any[]
+
     // Calculate totals for each profile
-    const profilesWithTotals = profiles.map((profile) => {
+    const profilesWithTotals = profilesArray.map((profile: any) => {
       // Get payments linked by user_id OR profile_id (for unlinked profiles)
       const confirmedFromPayments =
-        payments
-          ?.filter((p) => 
+        paymentsArray
+          .filter((p) => 
             (p.user_id && p.user_id === profile.user_id) || 
             (p.profile_id && p.profile_id === profile.id)
           )

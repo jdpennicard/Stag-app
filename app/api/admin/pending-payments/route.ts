@@ -38,10 +38,13 @@ export async function GET() {
       return NextResponse.json([])
     }
 
+    // Cast payments to any[] to avoid TypeScript errors
+    const paymentsArray: any[] = payments as any[]
+
     // Fetch related profiles and deadlines
-    const userIds = [...new Set(payments.map((p) => p.user_id).filter(Boolean))]
-    const profileIds = [...new Set(payments.map((p) => p.profile_id).filter(Boolean))]
-    const deadlineIds = [...new Set(payments.map((p) => p.deadline_id).filter(Boolean))]
+    const userIds = Array.from(new Set(paymentsArray.map((p) => p.user_id).filter(Boolean)))
+    const profileIds = Array.from(new Set(paymentsArray.map((p) => p.profile_id).filter(Boolean)))
+    const deadlineIds = Array.from(new Set(paymentsArray.map((p) => p.deadline_id).filter(Boolean)))
 
     // Fetch profiles by user_id
     let profilesByUserId: any[] = []
@@ -73,7 +76,7 @@ export async function GET() {
     }
 
     // Transform the data
-    const formattedPayments = payments.map((payment: any) => {
+    const formattedPayments = paymentsArray.map((payment: any) => {
       // Try to find profile by user_id first, then by profile_id
       const profile = payment.user_id 
         ? profilesByUserId?.find((p) => p.user_id === payment.user_id)

@@ -35,7 +35,7 @@ export async function PATCH(
     const { error } = await supabase
       .from('payments')
       .update(updateData)
-      .eq('id', params.id)
+      .eq('id', params.id as any)
 
     if (error) {
       return NextResponse.json({ error: 'Failed to confirm payment' }, { status: 500 })
