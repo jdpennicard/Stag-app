@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase/server'
 import { getCurrentUser, isAdmin } from '@/lib/auth'
-import { Database } from '@/lib/supabase/database.types'
-
-type ProfileInsert = Database['public']['Tables']['profiles']['Insert']
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,17 +29,15 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerClient()
 
-    const insertData: ProfileInsert = {
-      full_name,
-      email: email || null,
-      total_due: parseFloat(total_due),
-      initial_confirmed_paid: parseFloat(initial_confirmed_paid) || 0,
-      is_admin: is_admin || false,
-    }
-
     const { data, error } = await supabase
       .from('profiles')
-      .insert(insertData)
+      .insert({
+        full_name,
+        email: email || null,
+        total_due: parseFloat(total_due),
+        initial_confirmed_paid: parseFloat(initial_confirmed_paid) || 0,
+        is_admin: is_admin || false,
+      } as any)
       .select()
       .single()
 
