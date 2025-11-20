@@ -26,20 +26,26 @@ export async function POST(request: NextRequest) {
     const supabase = createServerClient()
 
     // Verify the profile exists
-    let profile
+    let profile: any = null
     if (user_id) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user_id)
         .single()
+      if (error || !data) {
+        return NextResponse.json({ error: 'Guest profile not found' }, { status: 404 })
+      }
       profile = data
     } else if (profile_id) {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', profile_id)
         .single()
+      if (error || !data) {
+        return NextResponse.json({ error: 'Guest profile not found' }, { status: 404 })
+      }
       profile = data
     }
 
@@ -65,7 +71,7 @@ export async function POST(request: NextRequest) {
     if (user_id) {
       insertData.user_id = user_id
     } else {
-      insertData.profile_id = profile_id || profile.id
+      insertData.profile_id = profile_id || profile?.id
     }
 
     const { data, error } = await supabase
