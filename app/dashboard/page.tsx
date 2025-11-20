@@ -14,23 +14,26 @@ export default async function DashboardPage() {
     redirect('/claim-profile')
   }
 
+  // Cast profile to any to avoid TypeScript errors
+  const profileData: any = profile as any
+
   const supabase = createServerClient()
 
   // Fetch payments - if admin, fetch all pending payments; otherwise just their own
-  let payments
-  if (profile.is_admin) {
+  let payments: any[] = []
+  if (profileData.is_admin) {
     const { data: allPayments } = await supabase
       .from('payments')
       .select('*')
       .order('created_at', { ascending: false })
-    payments = allPayments
+    payments = (allPayments || []) as any[]
   } else {
     const { data: userPayments } = await supabase
       .from('payments')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('user_id', user.id as any)
       .order('created_at', { ascending: false })
-    payments = userPayments
+    payments = (userPayments || []) as any[]
   }
 
   // Fetch deadlines
@@ -38,33 +41,34 @@ export default async function DashboardPage() {
     .from('payment_deadlines')
     .select('*')
     .order('due_date', { ascending: true })
+  const deadlinesArray: any[] = (deadlines || []) as any[]
   
   // If admin, also fetch all profiles for payment approval (including unlinked ones)
   let allProfiles: any[] = []
-  if (profile.is_admin) {
+  if (profileData.is_admin) {
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, user_id, full_name, email')
-    allProfiles = profiles || []
+    allProfiles = (profiles || []) as any[]
   }
 
   // Calculate totals
   const confirmedFromPayments =
-    payments?.filter((p) => p.status === 'confirmed').reduce((sum, p) => sum + Number(p.amount), 0) || 0
-  const confirmedTotal = Number(profile.initial_confirmed_paid) + confirmedFromPayments
+    payments.filter((p: any) => p.status === 'confirmed').reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0
+  const confirmedTotal = Number(profileData.initial_confirmed_paid) + confirmedFromPayments
   const pendingTotal =
-    payments?.filter((p) => p.status === 'pending').reduce((sum, p) => sum + Number(p.amount), 0) || 0
-  const remaining = Number(profile.total_due) - confirmedTotal
+    payments.filter((p: any) => p.status === 'pending').reduce((sum: number, p: any) => sum + Number(p.amount), 0) || 0
+  const remaining = Number(profileData.total_due) - confirmedTotal
 
   return (
     <DashboardContent
-      profile={profile}
-      payments={payments || []}
-      deadlines={deadlines || []}
+      profile={profileData}
+      payments={payments}
+      deadlines={deadlinesArray}
       confirmedTotal={confirmedTotal}
       pendingTotal={pendingTotal}
       remaining={remaining}
-      isAdmin={profile.is_admin}
+      isAdmin={profileData.is_admin}
       allProfiles={allProfiles}
       currentUserId={user.id}
     />

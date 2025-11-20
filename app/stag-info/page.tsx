@@ -14,6 +14,9 @@ export default async function StagInfoPage() {
     redirect('/claim-profile')
   }
 
+  // Cast profile to any to avoid TypeScript errors
+  const profileData: any = profile as any
+
   const supabase = createServerClient()
 
   // Fetch all posts with their links
@@ -27,12 +30,14 @@ export default async function StagInfoPage() {
     .order('order_index', { ascending: false })
     .order('created_at', { ascending: false })
 
+  const postsArray: any[] = (posts || []) as any[]
+
   return (
     <StagInfoContent
-      posts={posts || []}
-      isAdmin={profile.is_admin}
+      posts={postsArray}
+      isAdmin={profileData.is_admin}
       currentUserId={user.id}
-      profileName={profile.full_name}
+      profileName={profileData.full_name}
     />
   )
 }

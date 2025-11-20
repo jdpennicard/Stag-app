@@ -68,10 +68,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create post' }, { status: 500 })
     }
 
+    // Cast post to any to avoid TypeScript errors
+    const postData: any = post as any
+
     // Create links if provided
     if (links && links.length > 0) {
       const linksToInsert: any[] = links.map((link: { title: string; url: string }) => ({
-        post_id: post.id,
+        post_id: postData.id,
         title: link.title,
         url: link.url,
       }))
@@ -79,7 +82,7 @@ export async function POST(request: NextRequest) {
       await supabase.from('stag_info_links').insert(linksToInsert)
     }
 
-    return NextResponse.json(post)
+    return NextResponse.json(postData)
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }

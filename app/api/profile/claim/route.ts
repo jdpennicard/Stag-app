@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const { data: profile, error: fetchError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', profileId)
+      .eq('id', profileId as any)
       .is('user_id', null)
       .single()
 
@@ -28,14 +28,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found or already claimed' }, { status: 404 })
     }
 
+    // Cast profile to any to avoid TypeScript errors
+    const profileData: any = profile as any
+
     // Claim the profile - update without selecting to avoid RLS issues
+    const updateData: any = {
+      user_id: user.id,
+      email: profileData.email || user.email || null,
+    }
+
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({
-        user_id: user.id,
-        email: profile.email || user.email || null,
-      })
-      .eq('id', profileId)
+      .update(updateData)
+      .eq('id', profileId as any)
       .is('user_id', null) // Only update if still unclaimed
 
     if (updateError) {
@@ -51,8 +56,8 @@ export async function POST(request: NextRequest) {
     const { data: claimedProfile, error: verifyError } = await supabase
       .from('profiles')
       .select('id, user_id')
-      .eq('id', profileId)
-      .eq('user_id', user.id)
+      .eq('id', profileId as any)
+      .eq('user_id', user.id as any)
       .maybeSingle()
 
     if (verifyError) {

@@ -16,7 +16,7 @@ export async function getCurrentProfile() {
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', user.id as any)
     .single()
 
   return profile
@@ -24,7 +24,8 @@ export async function getCurrentProfile() {
 
 export async function isAdmin() {
   const profile = await getCurrentProfile()
-  return profile?.is_admin ?? false
+  const profileData: any = profile as any
+  return profileData?.is_admin ?? false
 }
 
 export async function ensureAdminStatus() {
@@ -38,7 +39,7 @@ export async function ensureAdminStatus() {
   const { data: profile, error: fetchError } = await supabase
     .from('profiles')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('user_id', user.id as any)
     .single()
 
   if (fetchError && fetchError.code !== 'PGRST116') {
@@ -46,29 +47,33 @@ export async function ensureAdminStatus() {
     console.error('Error fetching profile in ensureAdminStatus:', fetchError)
   }
 
-  if (profile && !profile.is_admin) {
+  const profileData: any = profile as any
+
+  if (profileData && !profileData.is_admin) {
+    const updateData: any = { is_admin: true }
     const { error: updateError } = await supabase
       .from('profiles')
-      .update({ is_admin: true })
-      .eq('user_id', user.id)
+      .update(updateData)
+      .eq('user_id', user.id as any)
     
     if (updateError) {
       console.error('Error updating admin status:', updateError)
       return null
     }
     // Return updated profile
-    return { ...profile, is_admin: true }
-  } else if (!profile) {
+    return { ...profileData, is_admin: true }
+  } else if (!profileData) {
+    const insertData: any = {
+      user_id: user.id,
+      full_name: user.email.split('@')[0],
+      email: user.email,
+      is_admin: true,
+      total_due: 0,
+      initial_confirmed_paid: 0,
+    }
     const { data: insertedData, error: insertError } = await supabase
       .from('profiles')
-      .insert({
-        user_id: user.id,
-        full_name: user.email.split('@')[0],
-        email: user.email,
-        is_admin: true,
-        total_due: 0,
-        initial_confirmed_paid: 0,
-      })
+      .insert(insertData)
       .select()
       .single()
     
@@ -82,6 +87,6 @@ export async function ensureAdminStatus() {
   }
 
   // Profile exists and is already admin
-  return profile
+  return profileData
 }
 

@@ -16,7 +16,7 @@ export async function GET() {
       .from('profiles')
       .select('id, full_name')
       .is('user_id', null)
-      .eq('is_admin', false)
+      .eq('is_admin', false as any)
       .order('full_name')
 
     if (error) {

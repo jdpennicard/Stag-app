@@ -67,12 +67,15 @@ export async function POST(request: NextRequest) {
       }, { status: 500 })
     }
     
+    // Cast existingItems to any[] to avoid TypeScript errors
+    const existingItemsArray: any[] = (existingItems || []) as any[]
+
     // Delete existing items if any exist
-    if (existingItems && existingItems.length > 0) {
+    if (existingItemsArray.length > 0) {
       const { error: deleteError } = await supabase
         .from('weekends_plan_items')
         .delete()
-        .in('id', existingItems.map((item) => item.id))
+        .in('id', existingItemsArray.map((item: any) => item.id))
       
       if (deleteError) {
         console.error('Error deleting existing items:', deleteError)

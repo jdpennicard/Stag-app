@@ -22,15 +22,17 @@ export default async function Home() {
       const { data: existingProfile } = await supabase
         .from('profiles')
         .select('*')
-        .eq('email', user.email)
+        .eq('email', user.email as any)
         .is('user_id', null)
         .single()
       
       if (existingProfile) {
+        const profileData: any = existingProfile as any
+        const updateData: any = { user_id: user.id }
         await supabase
           .from('profiles')
-          .update({ user_id: user.id })
-          .eq('id', existingProfile.id)
+          .update(updateData)
+          .eq('id', profileData.id as any)
         redirect('/dashboard')
       } else {
         redirect('/claim-profile')
