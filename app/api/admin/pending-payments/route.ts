@@ -27,7 +27,7 @@ export async function GET() {
     const { data: payments, error: paymentsError } = await supabase
       .from('payments')
       .select('*')
-      .eq('status', 'pending')
+      .eq('status', 'pending' as any)
       .order('created_at', { ascending: false })
 
     if (paymentsError) {

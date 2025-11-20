@@ -41,7 +41,7 @@ export async function GET() {
     const { data: payments, error: paymentsError } = await supabase
       .from('payments')
       .select('*')
-      .eq('status', 'confirmed')
+      .eq('status', 'confirmed' as any)
 
     if (paymentsError) {
       return NextResponse.json({ error: 'Failed to fetch payments' }, { status: 500 })

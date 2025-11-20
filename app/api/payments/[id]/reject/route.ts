@@ -26,11 +26,13 @@ export async function PATCH(
 
     const supabase = createServerClient()
 
+    const updateData: any = {
+      status: 'rejected',
+    }
+
     const { error } = await supabase
       .from('payments')
-      .update({
-        status: 'rejected',
-      })
+      .update(updateData)
       .eq('id', params.id)
 
     if (error) {
