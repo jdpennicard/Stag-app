@@ -24,15 +24,17 @@ export async function POST(request: NextRequest) {
       finalNote = finalNote ? `${finalNote} (Date: ${dateStr})` : `Payment Date: ${dateStr}`
     }
 
+    const insertData: any = {
+      user_id: user.id,
+      amount,
+      deadline_id: null,
+      note: finalNote || null,
+      status: 'pending',
+    }
+
     const { data, error } = await supabase
       .from('payments')
-      .insert({
-        user_id: user.id,
-        amount,
-        deadline_id: null,
-        note: finalNote || null,
-        status: 'pending',
-      })
+      .insert(insertData)
       .select()
       .single()
 

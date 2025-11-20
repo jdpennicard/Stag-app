@@ -50,15 +50,17 @@ export async function POST(request: NextRequest) {
     const supabase = createServerClient()
 
     // Create the post
+    const insertData: any = {
+      headline,
+      content: content || null,
+      created_by: user.id,
+      is_pinned: is_pinned || false,
+      updated_at: new Date().toISOString(),
+    }
+
     const { data: post, error: postError } = await supabase
       .from('stag_info_posts')
-      .insert({
-        headline,
-        content: content || null,
-        created_by: user.id,
-        is_pinned: is_pinned || false,
-        updated_at: new Date().toISOString(),
-      })
+      .insert(insertData)
       .select()
       .single()
 
@@ -68,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     // Create links if provided
     if (links && links.length > 0) {
-      const linksToInsert = links.map((link: { title: string; url: string }) => ({
+      const linksToInsert: any[] = links.map((link: { title: string; url: string }) => ({
         post_id: post.id,
         title: link.title,
         url: link.url,

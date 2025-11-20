@@ -57,18 +57,20 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerClient()
 
+    const insertData: any = {
+      description,
+      location: location || null,
+      cost: parseFloat(cost),
+      paid_so_far: parseFloat(paid_so_far) || 0,
+      first_payment_date: first_payment_date || null,
+      next_payment_date: next_payment_date || null,
+      notes: notes || null,
+      booked_by: user.id,
+    }
+
     const { data, error } = await supabase
       .from('bookings')
-      .insert({
-        description,
-        location: location || null,
-        cost: parseFloat(cost),
-        paid_so_far: parseFloat(paid_so_far) || 0,
-        first_payment_date: first_payment_date || null,
-        next_payment_date: next_payment_date || null,
-        notes: notes || null,
-        booked_by: user.id,
-      })
+      .insert(insertData)
       .select()
       .single()
 

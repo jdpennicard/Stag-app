@@ -49,7 +49,7 @@ export async function PUT(
 
     // Create new links if provided
     if (links && links.length > 0) {
-      const linksToInsert = links.map((link: { title: string; url: string }) => ({
+      const linksToInsert: any[] = links.map((link: { title: string; url: string }) => ({
         post_id: postId,
         title: link.title,
         url: link.url,
