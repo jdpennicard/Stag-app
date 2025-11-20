@@ -29,15 +29,17 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerClient()
 
+    const insertData: any = {
+      full_name,
+      email: email || null,
+      total_due: parseFloat(total_due),
+      initial_confirmed_paid: parseFloat(initial_confirmed_paid) || 0,
+      is_admin: is_admin || false,
+    }
+
     const { data, error } = await supabase
       .from('profiles')
-      .insert({
-        full_name,
-        email: email || null,
-        total_due: parseFloat(total_due),
-        initial_confirmed_paid: parseFloat(initial_confirmed_paid) || 0,
-        is_admin: is_admin || false,
-      } as any)
+      .insert(insertData)
       .select()
       .single()
 

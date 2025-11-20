@@ -24,15 +24,17 @@ export async function PATCH(
 
     const supabase = createServerClient()
 
+    const updateData: any = {
+      full_name,
+      email: email || null,
+      total_due: parseFloat(total_due),
+      initial_confirmed_paid: parseFloat(initial_confirmed_paid) || 0,
+      is_admin: is_admin || false,
+    }
+
     const { data, error } = await supabase
       .from('profiles')
-      .update({
-        full_name,
-        email: email || null,
-        total_due: parseFloat(total_due),
-        initial_confirmed_paid: parseFloat(initial_confirmed_paid) || 0,
-        is_admin: is_admin || false,
-      })
+      .update(updateData)
       .eq('id', params.id)
       .select()
       .single()
