@@ -1,4 +1,4 @@
-npmnpm # Quick Start Guide
+# Quick Start Guide
 
 ## 30-Minute Setup to Production
 
