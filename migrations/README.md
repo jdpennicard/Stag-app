@@ -20,6 +20,7 @@ This folder contains SQL migration scripts for the Stag App database.
 10. **setup-stag-info-storage.sql** - Sets up Supabase Storage bucket for stag-info-files (if needed)
 11. **add-keep-alive-log.sql** - Creates keep-alive log table and RPC function to prevent Supabase project pausing
 12. **add-signup-token.sql** - Adds signup_token and signup_token_expires_at columns for magic link signup
+13. **fix-signup-token-rls.sql** - Adds RLS policy to allow viewing profiles with valid signup tokens (required for magic links to work)
 
 ## Notes
 

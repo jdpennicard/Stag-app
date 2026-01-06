@@ -9,8 +9,9 @@ interface PageProps {
   }
 }
 
-export default async function SignupPage({ params }: PageProps) {
+export default async function SignupPage({ params, searchParams }: PageProps & { searchParams?: { reset?: string } }) {
   const { profileId, token } = params
+  const isPasswordReset = searchParams?.reset === 'true'
 
   // Check if user is already logged in
   const supabase = createServerClient()
@@ -70,20 +71,28 @@ export default async function SignupPage({ params }: PageProps) {
   }
 
   // Verify the token and profile
+  // Note: This query should work for unauthenticated users if the RLS policy is set up correctly
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('id, full_name, email, signup_token, signup_token_expires_at, user_id')
     .eq('id', profileId as any)
+    .eq('signup_token', token) // Filter by token to leverage RLS policy
     .single()
 
   if (error || !profile) {
+    console.error('Error fetching profile for signup:', error)
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
           <h1 className="text-2xl font-bold text-center mb-4 text-red-600">Invalid Link</h1>
-          <p className="text-center text-gray-600">
+          <p className="text-center text-gray-600 mb-2">
             This signup link is invalid or has expired. Please contact an administrator for a new link.
           </p>
+          {process.env.NODE_ENV === 'development' && error && (
+            <p className="text-center text-xs text-gray-400 mt-2">
+              Debug: {error.message}
+            </p>
+          )}
         </div>
       </div>
     )
@@ -137,6 +146,12 @@ export default async function SignupPage({ params }: PageProps) {
   }
 
   // All checks passed - show signup form
-  return <MagicLinkSignup profileId={profileId} token={token} profileName={profileData.full_name} />
+  return <MagicLinkSignup 
+    profileId={profileId} 
+    token={token} 
+    profileName={profileData.full_name}
+    profileEmail={profileData.email || null}
+    isPasswordReset={isPasswordReset}
+  />
 }
 

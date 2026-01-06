@@ -112,6 +112,29 @@ export default function AdminContent() {
     }
   }
 
+  const handleDeleteProfile = async (profileId: string, profileName: string) => {
+    if (!confirm(`Are you sure you want to delete "${profileName}"? This will permanently delete:\n- The guest profile\n- All associated payments\n- The linked account (if any)\n\nThis action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const res = await fetch(`/api/admin/delete-guest/${profileId}`, {
+        method: 'DELETE',
+      })
+      
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to delete guest')
+      }
+
+      // Refresh the data
+      fetchData()
+    } catch (err: any) {
+      setError(err.message || 'Failed to delete guest')
+      setTimeout(() => setError(null), 5000)
+    }
+  }
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-GB', {
       style: 'currency',
@@ -242,21 +265,12 @@ export default function AdminContent() {
                           )}
                         </td>
                         <td className="py-2 px-4">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => setEditingProfile(profile.id)}
-                              className="text-blue-600 hover:text-blue-800 text-sm"
-                            >
-                              Edit
-                            </button>
-                            {!profile.user_id && (
-                              <GenerateSignupLinkButton 
-                                profileId={profile.id} 
-                                profileName={profile.full_name}
-                                onSuccess={fetchData}
-                              />
-                            )}
-                          </div>
+                          <ProfileActionsDropdown
+                            profile={profile}
+                            onEdit={() => setEditingProfile(profile.id)}
+                            onDelete={() => handleDeleteProfile(profile.id, profile.full_name)}
+                            onRefresh={fetchData}
+                          />
                         </td>
                       </>
                     )}
@@ -658,3 +672,67 @@ function GenerateSignupLinkButton({
     </div>
   )
 }
+
+function ResetPasswordButton({ 
+  profileId, 
+  email,
+  profileName 
+}: { 
+  profileId: string
+  email: string
+  profileName: string 
+}) {
+  const [loading, setLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleResetPassword = async () => {
+    if (!confirm(`Send password reset email to ${email}?`)) {
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+    setSuccess(false)
+
+    try {
+      const res = await fetch('/api/admin/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileId, email }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Failed to send password reset email')
+      }
+
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 3000)
+    } catch (err: any) {
+      setError(err.message)
+      setTimeout(() => setError(null), 5000)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={handleResetPassword}
+        disabled={loading || success}
+        className="text-orange-600 hover:text-orange-800 text-sm disabled:opacity-50"
+        title={`Send password reset email to ${profileName}`}
+      >
+        {loading ? 'Sending...' : success ? '✓ Sent' : 'Reset Password'}
+      </button>
+      {error && (
+        <div className="absolute top-full left-0 mt-1 bg-red-50 border border-red-200 text-red-700 text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+          {error}
+        </div>
+      )}
+    </div>
+  )
+}
+
