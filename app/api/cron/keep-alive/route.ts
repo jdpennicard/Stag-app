@@ -45,16 +45,32 @@ export async function GET(request: NextRequest) {
     // Try using the RPC function first (most efficient - it also logs automatically)
     let pingSuccess = false
     let error: any = null
+    let logInserted = false
+    let debugInfo: any = {}
+    
+    // Check which key we're using
+    const usingServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY
+    debugInfo.usingServiceRole = usingServiceRole
     
     try {
       const result = await supabase.rpc('keep_alive_ping')
+      debugInfo.rpcAttempted = true
+      debugInfo.rpcResult = result
+      
       if (result.error) {
         error = result.error
+        console.error('RPC keep_alive_ping error:', JSON.stringify(result.error, null, 2))
+        debugInfo.rpcError = result.error
       } else {
         pingSuccess = true
+        logInserted = true
+        console.log('RPC keep_alive_ping succeeded, log entry created')
       }
-    } catch (rpcError) {
+    } catch (rpcError: any) {
       // If RPC doesn't exist yet (migration not run), fall back to a simple table query
+      console.log('RPC function threw exception, using fallback method:', rpcError.message)
+      debugInfo.rpcException = rpcError.message
+      
       const result = await supabase
         .from('profiles')
         .select('id')
@@ -62,17 +78,33 @@ export async function GET(request: NextRequest) {
       
       if (result.error) {
         error = result.error
+        console.warn('Fallback query error:', result.error)
+        debugInfo.fallbackError = result.error
       } else {
         pingSuccess = true
+        debugInfo.fallbackSuccess = true
       }
       
       // Try to log manually if RPC failed (table might not exist yet)
       try {
-        await supabase
+        const logResult = await supabase
           .from('keep_alive_log')
           .insert({ pinged_at: new Date().toISOString() })
-      } catch {
+        
+        debugInfo.directInsertAttempted = true
+        debugInfo.directInsertResult = logResult
+        
+        if (logResult.error) {
+          console.error('Failed to insert into keep_alive_log:', JSON.stringify(logResult.error, null, 2))
+          debugInfo.directInsertError = logResult.error
+        } else {
+          logInserted = true
+          console.log('Direct insert succeeded, log entry created')
+        }
+      } catch (logError: any) {
         // Ignore if table doesn't exist - that's okay
+        console.error('Direct insert exception:', logError.message)
+        debugInfo.directInsertException = logError.message
       }
     }
 
@@ -85,7 +117,12 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),
-      message: 'Database keep-alive ping successful'
+      message: 'Database keep-alive ping successful',
+      logged: logInserted,
+      note: logInserted 
+        ? 'Log entry created successfully' 
+        : 'Log entry not created - check logs for details',
+      debug: process.env.NODE_ENV === 'development' ? debugInfo : undefined
     })
   } catch (error: any) {
     // Even on error, we've likely pinged the database

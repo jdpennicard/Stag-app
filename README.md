@@ -13,6 +13,8 @@ A production-ready Next.js web application for managing payments for Owen's Stag
 - **Payment Deadlines**: Display and track payment deadlines with countdowns
 - **Real-time Balance**: Automatic calculation of confirmed paid, pending, and remaining amounts
 - **Admin Payment Management**: Admins can add payments for any guest (including unclaimed profiles)
+- **Keep-Alive Mechanism**: Daily cron job prevents Supabase free tier projects from pausing
+- **Magic Link Signup**: Admins can generate unique signup links for guests - zero friction onboarding
 
 ## Tech Stack
 
@@ -29,6 +31,7 @@ A production-ready Next.js web application for managing payments for Owen's Stag
 2. Go to SQL Editor and run the SQL from `supabase-setup.sql` (or copy the schema below)
 3. Enable Email/Password authentication in Authentication > Providers
 4. Get your project URL and anon key from Settings > API
+5. **Optional but recommended**: Run `migrations/add-keep-alive-log.sql` to set up the keep-alive mechanism (prevents project pausing)
 
 ### 2. Local Development
 
@@ -67,6 +70,12 @@ A production-ready Next.js web application for managing payments for Owen's Stag
 3. Add all environment variables from `.env.local` to Vercel
 4. Deploy!
 
+**Keep-Alive Setup (Recommended for Supabase Free Tier):**
+- The app includes a daily cron job configured in `vercel.json` that pings the database to prevent Supabase from pausing your project
+- After deployment, the cron job will automatically run daily at midnight UTC
+- Optional: Set `KEEP_ALIVE_SECRET` environment variable in Vercel to secure the endpoint
+- You can verify it's working in Vercel Dashboard → Cron Jobs
+
 ## Database Schema
 
 The app uses the following main tables:
@@ -78,6 +87,7 @@ The app uses the following main tables:
 - **stag_info_posts**: Posts for Stag Info Central
 - **stag_info_links**: Links associated with posts
 - **weekends_plan_items**: Weekend itinerary items by date
+- **keep_alive_log**: Log table for keep-alive pings (prevents Supabase project pausing)
 
 See `supabase-setup.sql` for the complete schema. Additional migrations are in the `migrations/` folder.
 
@@ -117,6 +127,7 @@ See `supabase-setup.sql` for the complete schema. Additional migrations are in t
 | `NEXT_PUBLIC_STAG_PAYMENT_INSTRUCTION` | Payment instruction text | Yes |
 | `NEXT_PUBLIC_PAYMENT_DEADLINE` | Next payment deadline (YYYY-MM-DD) | Optional |
 | `NEXT_PUBLIC_STAG_DATE` | Stag event date (YYYY-MM-DD) | Optional |
+| `KEEP_ALIVE_SECRET` | Secret token for keep-alive endpoint security | Optional |
 
 ## Project Structure
 
@@ -135,7 +146,8 @@ See `supabase-setup.sql` for the complete schema. Additional migrations are in t
 ├── components/           # React components
 ├── lib/                  # Utilities and Supabase clients
 ├── migrations/           # Database migration scripts
-└── supabase-setup.sql    # Main database schema
+├── supabase-setup.sql    # Main database schema
+└── vercel.json           # Vercel configuration (includes keep-alive cron job)
 ```
 
 ## License

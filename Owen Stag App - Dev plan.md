@@ -452,6 +452,9 @@ STAG_BANK_SORT_CODE="12-34-56"
 RESEND_API_KEY=...
 EMAIL_FROM="stag-payments@example.com"
 
+# Optional: Keep-alive mechanism (prevents Supabase free tier from pausing)
+KEEP_ALIVE_SECRET=your-random-secret-token  # Optional: protects keep-alive endpoint
+
 8. Deployment Plan (High-Level Steps)
 
 Supabase
@@ -504,6 +507,12 @@ Push repo to GitHub (or import via Vercel).
 Create Vercel project and set all env vars.
 
 Deploy.
+
+**Keep-Alive Setup (Recommended):**
+- Run migration: `migrations/add-keep-alive-log.sql` in Supabase SQL Editor
+- The `vercel.json` file is already configured with a daily cron job
+- This prevents Supabase free tier projects from pausing after 1 week of inactivity
+- Optional: Set `KEEP_ALIVE_SECRET` environment variable for endpoint security
 
 Test flows
 

@@ -242,12 +242,21 @@ export default function AdminContent() {
                           )}
                         </td>
                         <td className="py-2 px-4">
-                          <button
-                            onClick={() => setEditingProfile(profile.id)}
-                            className="text-blue-600 hover:text-blue-800 text-sm"
-                          >
-                            Edit
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setEditingProfile(profile.id)}
+                              className="text-blue-600 hover:text-blue-800 text-sm"
+                            >
+                              Edit
+                            </button>
+                            {!profile.user_id && (
+                              <GenerateSignupLinkButton 
+                                profileId={profile.id} 
+                                profileName={profile.full_name}
+                                onSuccess={fetchData}
+                              />
+                            )}
+                          </div>
                         </td>
                       </>
                     )}
@@ -535,5 +544,117 @@ function AddGuestForm({ onSuccess }: { onSuccess: () => void }) {
         {loading ? 'Adding...' : 'Add Guest'}
       </button>
     </form>
+  )
+}
+
+function GenerateSignupLinkButton({ 
+  profileId, 
+  profileName,
+  onSuccess 
+}: { 
+  profileId: string
+  profileName: string
+  onSuccess: () => void 
+}) {
+  const [loading, setLoading] = useState(false)
+  const [signupUrl, setSignupUrl] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleGenerateLink = async () => {
+    setLoading(true)
+    setError(null)
+    setSignupUrl(null)
+
+    try {
+      const res = await fetch('/api/admin/generate-signup-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileId }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        const errorMessage = data.details 
+          ? `${data.error}: ${data.details}` 
+          : data.error || 'Failed to generate signup link'
+        throw new Error(errorMessage)
+      }
+
+      const data = await res.json()
+      setSignupUrl(data.signupUrl)
+      onSuccess() // Refresh the data
+    } catch (err: any) {
+      setError(err.message || 'Failed to generate signup link')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const [copied, setCopied] = useState(false)
+
+  const handleCopyLink = async () => {
+    if (signupUrl) {
+      try {
+        await navigator.clipboard.writeText(signupUrl)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      } catch (err) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea')
+        textArea.value = signupUrl
+        document.body.appendChild(textArea)
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }
+    }
+  }
+
+  if (signupUrl) {
+    return (
+      <div className="flex items-center gap-2">
+        <button
+          onClick={handleCopyLink}
+          className={`text-sm font-semibold ${
+            copied 
+              ? 'text-green-600' 
+              : 'text-green-600 hover:text-green-800'
+          }`}
+          title="Click to copy link"
+        >
+          {copied ? '✓ Copied!' : 'Copy Link'}
+        </button>
+        <button
+          onClick={() => {
+            setSignupUrl(null)
+            setCopied(false)
+          }}
+          className="text-gray-500 hover:text-gray-700 text-xs"
+          title="Close"
+        >
+          ×
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={handleGenerateLink}
+        disabled={loading}
+        className="text-green-600 hover:text-green-800 text-sm disabled:opacity-50"
+        title={`Generate signup link for ${profileName}`}
+      >
+        {loading ? 'Generating...' : 'Get Link'}
+      </button>
+      {error && (
+        <div className="absolute top-full left-0 mt-1 bg-red-50 border border-red-200 text-red-700 text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+          {error}
+        </div>
+      )}
+    </div>
   )
 }

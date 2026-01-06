@@ -19,21 +19,30 @@ CREATE POLICY "Anyone can view keep-alive logs"
   TO authenticated
   USING (true);
 
--- Note: Only the keep-alive endpoint should insert, so we don't need an insert policy
--- The endpoint uses service role or bypasses RLS
+-- Allow inserts from anyone (anon key, service role, etc.)
+-- This is safe since it's just a log table with no sensitive data
+CREATE POLICY "Allow keep-alive inserts"
+  ON keep_alive_log FOR INSERT
+  TO anon, authenticated
+  WITH CHECK (true);
 
 -- Create a simple RPC function for keep-alive ping
 -- This is the most efficient way to ping the database
+-- SECURITY DEFINER allows it to bypass RLS when inserting
 CREATE OR REPLACE FUNCTION keep_alive_ping()
 RETURNS INTEGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
-  -- Log the ping
+  -- Log the ping (this will bypass RLS due to SECURITY DEFINER)
   INSERT INTO keep_alive_log (pinged_at) VALUES (NOW());
   -- Return 1 to indicate success
   RETURN 1;
 END;
 $$;
+
+-- Grant execute permission to anon and authenticated users
+GRANT EXECUTE ON FUNCTION keep_alive_ping() TO anon, authenticated;
 
