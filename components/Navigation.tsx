@@ -51,6 +51,12 @@ export default function Navigation({ isAdmin }: { isAdmin?: boolean }) {
           >
             Bookings - Admin
           </a>
+          <a 
+            href="/admin/email-templates" 
+            className={`text-sm ${pathname === '/admin/email-templates' ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}
+          >
+            Email Templates
+          </a>
         </div>
       )}
       

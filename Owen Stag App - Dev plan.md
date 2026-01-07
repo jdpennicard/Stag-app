@@ -8,6 +8,10 @@ Build a simple, production-ready web app to manage payments for:
 
 Owen's Stag 2026 – Bournemouth
 
+**Note: This document is the original development plan. The following features have been completed:**
+- ✅ **Supabase Keep-Alive Mechanism**: Daily cron job prevents Supabase free tier projects from pausing (see `migrations/add-keep-alive-log.sql` and `vercel.json`)
+- ✅ **Magic Link Signup**: Admins can generate unique signup links for guests - zero friction onboarding (see `app/api/admin/generate-signup-link/route.ts` and `app/signup/[profileId]/[token]/page.tsx`)
+
 The app will:
 
 Let guests log in and see:
@@ -143,7 +147,12 @@ On login / profile init:
 
 If user’s email is in ADMIN_EMAILS, mark profiles.is_admin = true for their profile.
 
-4.3 Claiming a profile (“select your name”)
+4.3 Claiming a profile ("select your name")
+
+**Note: In addition to the manual claim flow below, the app now supports Magic Link signup:**
+- Admins can generate unique signup links for unclaimed profiles with email addresses
+- Guests click the link → create account → automatically linked → redirected to dashboard
+- See `app/api/admin/generate-signup-link/route.ts` and `app/signup/[profileId]/[token]/page.tsx`
 
 Flow:
 
@@ -155,7 +164,7 @@ If found → go to /dashboard.
 
 If not found:
 
-If there’s a profiles row where email = current_user.email and user_id IS NULL, auto-link:
+If there's a profiles row where email = current_user.email and user_id IS NULL, auto-link:
 
 Set profiles.user_id = current_user.id.
 
@@ -163,7 +172,7 @@ Go to /dashboard.
 
 Else:
 
-Show “Select your name” page:
+Show "Select your name" page:
 
 Dropdown of profiles where user_id IS NULL and is_admin = false.
 
@@ -178,6 +187,9 @@ This allows:
 You to set up all guests + amounts in advance.
 
 A single shared link – guests log in and pick their name.
+
+**Magic Link Alternative (✅ Implemented):**
+Admins can generate unique signup links for guests with email addresses - guests click link, create password, and are automatically linked.
 
 5. Pages & UX (Next.js App Router)
 5.1 / – Landing + Login/Signup
@@ -508,11 +520,17 @@ Create Vercel project and set all env vars.
 
 Deploy.
 
-**Keep-Alive Setup (Recommended):**
+**Keep-Alive Setup (✅ Implemented):**
 - Run migration: `migrations/add-keep-alive-log.sql` in Supabase SQL Editor
 - The `vercel.json` file is already configured with a daily cron job
 - This prevents Supabase free tier projects from pausing after 1 week of inactivity
 - Optional: Set `KEEP_ALIVE_SECRET` environment variable for endpoint security
+
+**Magic Link Signup (✅ Implemented):**
+- Run migration: `migrations/add-signup-token.sql` in Supabase SQL Editor
+- Run migration: `migrations/fix-signup-token-rls.sql` for RLS policies
+- Admins can generate signup links via the admin panel (three-dot menu → "Get Signup Link")
+- Guests receive a unique link that auto-links their profile when they create an account
 
 Test flows
 

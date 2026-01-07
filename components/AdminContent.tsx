@@ -673,33 +673,59 @@ function GenerateSignupLinkButton({
   )
 }
 
-function ResetPasswordButton({ 
-  profileId, 
-  email,
-  profileName 
-}: { 
-  profileId: string
-  email: string
-  profileName: string 
+function ProfileActionsDropdown({
+  profile,
+  onEdit,
+  onDelete,
+  onRefresh,
+}: {
+  profile: ProfileWithPayments
+  onEdit: () => void
+  onDelete: () => void
+  onRefresh: () => void
 }) {
-  const [loading, setLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [isOpen, setIsOpen] = useState(false)
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false)
+  const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false)
+  const [resetPasswordError, setResetPasswordError] = useState<string | null>(null)
+  const [signupLinkLoading, setSignupLinkLoading] = useState(false)
+  const [signupUrl, setSignupUrl] = useState<string | null>(null)
+  const [signupLinkError, setSignupLinkError] = useState<string | null>(null)
+  const [sendLinkLoading, setSendLinkLoading] = useState(false)
+  const [sendLinkSuccess, setSendLinkSuccess] = useState(false)
+  const [sendLinkError, setSendLinkError] = useState<string | null>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest('.profile-actions-dropdown')) {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('click', handleClickOutside)
+    return () => document.removeEventListener('click', handleClickOutside)
+  }, [isOpen])
 
   const handleResetPassword = async () => {
-    if (!confirm(`Send password reset email to ${email}?`)) {
+    if (!profile.email) return
+    
+    if (!confirm(`Send password reset email to ${profile.email}?`)) {
       return
     }
 
-    setLoading(true)
-    setError(null)
-    setSuccess(false)
+    setResetPasswordLoading(true)
+    setResetPasswordError(null)
+    setResetPasswordSuccess(false)
 
     try {
       const res = await fetch('/api/admin/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ profileId, email }),
+        body: JSON.stringify({ profileId: profile.id, email: profile.email }),
       })
 
       if (!res.ok) {
@@ -707,29 +733,344 @@ function ResetPasswordButton({
         throw new Error(data.error || 'Failed to send password reset email')
       }
 
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      setResetPasswordSuccess(true)
+      setTimeout(() => {
+        setResetPasswordSuccess(false)
+        setIsOpen(false)
+      }, 2000)
     } catch (err: any) {
-      setError(err.message)
-      setTimeout(() => setError(null), 5000)
+      setResetPasswordError(err.message)
+      setTimeout(() => setResetPasswordError(null), 5000)
     } finally {
-      setLoading(false)
+      setResetPasswordLoading(false)
+    }
+  }
+
+  const handleGenerateSignupLink = async () => {
+    setSignupLinkLoading(true)
+    setSignupLinkError(null)
+    setSignupUrl(null)
+
+    try {
+      const res = await fetch('/api/admin/generate-signup-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileId: profile.id }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        const errorMessage = data.details 
+          ? `${data.error}: ${data.details}` 
+          : data.error || 'Failed to generate signup link'
+        throw new Error(errorMessage)
+      }
+
+      const data = await res.json()
+      setSignupUrl(data.signupUrl)
+      onRefresh()
+    } catch (err: any) {
+      setSignupLinkError(err.message || 'Failed to generate signup link')
+    } finally {
+      setSignupLinkLoading(false)
+    }
+  }
+
+  const handleCopyLink = async () => {
+    if (signupUrl) {
+      try {
+        await navigator.clipboard.writeText(signupUrl)
+        // Show feedback
+        const originalText = signupUrl
+        setSignupUrl('✓ Copied!')
+        setTimeout(() => {
+          setSignupUrl(originalText)
+          setIsOpen(false)
+        }, 1500)
+      } catch (err) {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea')
+        textArea.value = signupUrl
+        document.body.appendChild(textArea)
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+        const originalText = signupUrl
+        setSignupUrl('✓ Copied!')
+        setTimeout(() => {
+          setSignupUrl(originalText)
+          setIsOpen(false)
+        }, 1500)
+      }
+    }
+  }
+
+  const handleSendSignupLink = async () => {
+    if (!profile.email) return
+    
+    if (!confirm(`Send signup link to ${profile.email}?`)) {
+      return
+    }
+
+    setSendLinkLoading(true)
+    setSendLinkError(null)
+    setSendLinkSuccess(false)
+
+    try {
+      const res = await fetch('/api/admin/send-signup-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileId: profile.id }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        const errorMsg = data.error || data.details || 'Failed to send signup link'
+        // If email template doesn't exist, provide helpful message
+        if (errorMsg.includes('template') || errorMsg.includes('not found')) {
+          throw new Error(`${errorMsg}. Please create a "Signup Link" template in Email Templates first.`)
+        }
+        throw new Error(errorMsg)
+      }
+
+      const data = await res.json()
+      
+      // Check if there's a warning (email failed but link was generated)
+      if (data.warning) {
+        setSendLinkError(data.warning + (data.error ? `: ${data.error}` : ''))
+        // Still show success for link generation
+        if (data.signupUrl) {
+          setSignupUrl(data.signupUrl)
+        }
+        setTimeout(() => setSendLinkError(null), 5000)
+      } else {
+        setSendLinkSuccess(true)
+        // Also set the signup URL so they can copy it if needed
+        if (data.signupUrl) {
+          setSignupUrl(data.signupUrl)
+        }
+        setTimeout(() => {
+          setSendLinkSuccess(false)
+          setIsOpen(false)
+        }, 2000)
+      }
+      
+      onRefresh()
+    } catch (err: any) {
+      setSendLinkError(err.message)
+      setTimeout(() => setSendLinkError(null), 5000)
+    } finally {
+      setSendLinkLoading(false)
     }
   }
 
   return (
-    <div className="relative">
+    <div className="relative profile-actions-dropdown">
       <button
-        onClick={handleResetPassword}
-        disabled={loading || success}
-        className="text-orange-600 hover:text-orange-800 text-sm disabled:opacity-50"
-        title={`Send password reset email to ${profileName}`}
+        onClick={(e) => {
+          e.stopPropagation()
+          setIsOpen(!isOpen)
+        }}
+        className="text-gray-600 hover:text-gray-800 p-1 rounded hover:bg-gray-100"
+        title="Actions"
       >
-        {loading ? 'Sending...' : success ? '✓ Sent' : 'Reset Password'}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-5 w-5"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+          />
+        </svg>
       </button>
-      {error && (
-        <div className="absolute top-full left-0 mt-1 bg-red-50 border border-red-200 text-red-700 text-xs px-2 py-1 rounded whitespace-nowrap z-10">
-          {error}
+
+      {isOpen && (
+        <div className="absolute right-0 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-50">
+          <div className="py-1">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit()
+                setIsOpen(false)
+              }}
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4 mr-2 text-blue-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                />
+              </svg>
+              Edit
+            </button>
+
+            {!profile.user_id && profile.email && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleSendSignupLink()
+                  }}
+                  disabled={sendLinkLoading || sendLinkSuccess}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center disabled:opacity-50"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4 mr-2 text-blue-600"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                  {sendLinkLoading ? 'Sending...' : sendLinkSuccess ? '✓ Link Sent!' : 'Send Signup Link'}
+                </button>
+                {signupUrl ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleCopyLink()
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 mr-2 text-green-600"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                      />
+                    </svg>
+                    {signupUrl.startsWith('✓') ? signupUrl : 'Copy Link'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleGenerateSignupLink()
+                    }}
+                    disabled={signupLinkLoading}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center disabled:opacity-50"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4 mr-2 text-green-600"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                      />
+                    </svg>
+                    {signupLinkLoading ? 'Generating...' : 'Get Signup Link'}
+                  </button>
+                )}
+                {sendLinkError && (
+                  <div className="px-4 py-2 text-xs text-red-600 bg-red-50">
+                    {sendLinkError}
+                  </div>
+                )}
+                {signupLinkError && (
+                  <div className="px-4 py-2 text-xs text-red-600 bg-red-50">
+                    {signupLinkError}
+                  </div>
+                )}
+              </>
+            )}
+
+            {profile.user_id && profile.email && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleResetPassword()
+                }}
+                disabled={resetPasswordLoading || resetPasswordSuccess}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center disabled:opacity-50"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-4 w-4 mr-2 text-orange-600"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                  />
+                </svg>
+                {resetPasswordLoading
+                  ? 'Sending...'
+                  : resetPasswordSuccess
+                  ? '✓ Sent'
+                  : 'Reset Password'}
+              </button>
+            )}
+
+            {resetPasswordError && (
+              <div className="px-4 py-2 text-xs text-red-600 bg-red-50">
+                {resetPasswordError}
+              </div>
+            )}
+
+            <div className="border-t border-gray-200 my-1"></div>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onDelete()
+                setIsOpen(false)
+              }}
+              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4 mr-2"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                />
+              </svg>
+              Delete
+            </button>
+          </div>
         </div>
       )}
     </div>

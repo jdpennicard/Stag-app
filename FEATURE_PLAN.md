@@ -75,47 +75,16 @@ lib/
 
 ---
 
-## 2. Simplified Sign-Up with Auto-Linking ✅ COMPLETED
-
-### Implementation Status: ✅ Complete
-
-**What was implemented:**
-- ✅ Profile-Based Magic Link system
-- ✅ Admin can generate unique signup links for unclaimed profiles
-- ✅ Users click link → create account → auto-linked to profile → redirected to dashboard
-- ✅ Token-based security with 30-day expiration
-- ✅ Handles already-logged-in users (auto-links if valid token)
-- ✅ Admin UI with "Get Link" button and copy-to-clipboard functionality
-
-**Files Created:**
-- ✅ `migrations/add-signup-token.sql` - Database migration
-- ✅ `app/api/admin/generate-signup-link/route.ts` - API to generate links
-- ✅ `app/signup/[profileId]/[token]/page.tsx` - Magic link handler page
-- ✅ `components/MagicLinkSignup.tsx` - Signup form component
-- ✅ Updated `components/AdminContent.tsx` - Added "Get Link" button
-
-**How to Use:**
-1. Admin goes to `/admin` panel
-2. For any unclaimed profile, click "Get Link" button
-3. Copy the generated link and send it to the guest
-4. Guest clicks link → creates account → automatically linked → redirected to dashboard
-
-**Database Migration:**
-Run `migrations/add-signup-token.sql` in Supabase SQL Editor to add the required columns.
-
----
-
 ## Implementation Priority & Order
 
 ### Phase 1: Quick Wins
 1. ✅ **Supabase Keep-Alive** - ✅ COMPLETED - Prevents project pause via daily cron job
-2. ⏳ **Email Setup** - Install Resend, create basic templates
-3. ⏳ **Payment Approval Email** - Most immediate value
+2. ✅ **Email Setup** - ✅ COMPLETED - Resend installed, template system built, admin UI created
+3. ⏳ **Payment Approval Email** - Most immediate value - Next to implement
 
 ### Phase 2: Core Features
 4. ⏳ **Sign Up Email** - Welcome new users
 5. ⏳ **Payment Submitted Email** - Confirm receipt
-6. ⏳ **Magic Link Signup** - Simplify onboarding
 
 ### Phase 3: Advanced
 7. ⏳ **Deadline Reminders** - Requires cron job setup
@@ -143,6 +112,11 @@ Run `migrations/add-signup-token.sql` in Supabase SQL Editor to add the required
 # Email
 RESEND_API_KEY=re_xxxxxxxxxxxxx
 EMAIL_FROM=noreply@yourdomain.com  # Or use Resend's default
+# Note: To use a custom domain email (e.g., noreply@yourdomain.com), you need to:
+# 1. Add and verify your domain in Resend dashboard
+# 2. Set up DNS records (SPF, DKIM, DMARC) as instructed by Resend
+# 3. Update EMAIL_FROM to use your verified domain
+# This improves deliverability and branding
 
 # Keep-Alive (already implemented - optional)
 KEEP_ALIVE_SECRET=your-random-secret-token  # Optional: protects keep-alive endpoint
@@ -154,16 +128,48 @@ KEEP_ALIVE_SECRET=your-random-secret-token  # Optional: protects keep-alive endp
 
 1. **Email Domain**: Do you have a custom domain for sending emails? (affects deliverability)
 2. **Email Frequency**: How often for deadline reminders? (7 days + 2 days, or also 1 day?)
-3. **Magic Link Expiry**: How long should signup tokens be valid? (suggest 30 days)
-4. **Cron Service**: Are you deploying to Vercel? (affects keep-alive implementation)
+3. **Cron Service**: Are you deploying to Vercel? (affects keep-alive implementation)
 
 ---
 
 ## Next Steps
 
-1. Review this plan and confirm approach
-2. Set up Resend account and get API key
-3. Decide on magic link approach (Option A or B)
-4. Confirm deployment platform for cron job
-5. Start implementation in priority order
+### ✅ Completed
+1. ✅ Email template system built (database, admin UI, variable substitution)
+2. ✅ Resend integration complete
+3. ✅ Test email functionality working
+
+### 🎯 Next Priority (In Order)
+
+**1. Payment Approval Email** (Highest Value)
+- Integrate email sending into `app/api/payments/[id]/confirm/route.ts`
+- Use template with event_type `payment_approved`
+- Send when admin confirms a payment
+- Variables: `{name}`, `{payment_amount}`, `{remaining}`, `{confirmed_paid}`
+
+**2. Payment Submitted Email**
+- Integrate into `app/api/payments/route.ts`
+- Use template with event_type `payment_submitted`
+- Send when user submits a payment
+- Variables: `{name}`, `{payment_amount}`, `{payment_date}`, `{payment_status}`
+
+**3. Sign Up Welcome Email**
+- Integrate into signup flow (magic link or regular signup)
+- Use template with event_type `signup`
+- Send after successful account creation
+- Variables: `{name}`, `{dashboard_url}`, `{event_name}`
+
+**4. Deadline Reminder Cron Job**
+- Create `/api/cron/deadline-reminders/route.ts`
+- Add to `vercel.json` cron schedule (daily)
+- Check deadlines 7 days and 2 days before due date
+- Send to profiles with remaining balance > 0
+- Use template with event_type `deadline_reminder`
+- Variables: `{name}`, `{days_away}`, `{deadline_date}`, `{remaining}`, `{suggested_amount}`
+
+**5. Custom Email Domain Setup** (Optional but Recommended)
+- Add domain to Resend dashboard
+- Configure DNS records (SPF, DKIM, DMARC)
+- Update `EMAIL_FROM` environment variable
+- Improves deliverability and branding
 

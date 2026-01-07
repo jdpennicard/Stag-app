@@ -195,8 +195,21 @@ export default function MagicLinkSignup({ profileId, token, profileName, profile
         }
       }
 
-      // Success! Wait a moment for session to be established, then redirect
+      // Success! Wait a moment for session to be established
       await new Promise(resolve => setTimeout(resolve, 500))
+      
+      // Send welcome email (non-blocking)
+      try {
+        await fetch('/api/email/send-signup-welcome', {
+          method: 'POST',
+        }).catch((err) => {
+          console.warn('Failed to send welcome email:', err)
+          // Don't block signup if email fails
+        })
+      } catch (emailErr) {
+        console.warn('Error sending welcome email:', emailErr)
+        // Don't block signup if email fails
+      }
       
       // Refresh the router to ensure the session is picked up
       router.refresh()
