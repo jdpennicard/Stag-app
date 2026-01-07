@@ -449,8 +449,8 @@ function TemplateForm({
       name,
       subject,
       body_text: bodyText,
-      body_html: bodyHtml || null,
-      description: description || null,
+      body_html: bodyHtml || undefined,
+      description: description || undefined,
       event_type: eventType,
       enabled,
     })
