@@ -20,7 +20,9 @@ export default function AdminContent() {
   const [profiles, setProfiles] = useState<ProfileWithPayments[]>([])
   const [pendingPayments, setPendingPayments] = useState<any[]>([])
   const [deadlines, setDeadlines] = useState<Deadline[]>([])
-  const [stagDates, setStagDates] = useState<{ start_date: string; end_date?: string | null } | null>(null)
+  const [stagDates, setStagDates] = useState<{ start_date: string; end_date?: string | null; event_name?: string | null } | null>(null)
+  const [eventName, setEventName] = useState<string | null>(null)
+  const [editingEventName, setEditingEventName] = useState(false)
   const [editingStagDates, setEditingStagDates] = useState(false)
   const [loading, setLoading] = useState(true)
   const [showAddGuest, setShowAddGuest] = useState(false)
@@ -61,6 +63,7 @@ export default function AdminContent() {
         if (stagDatesRes.ok) {
           const stagDatesData = await stagDatesRes.json()
           setStagDates(stagDatesData)
+          setEventName(stagDatesData?.event_name || null)
         }
         // Calculate percent paid for each profile
         const profilesWithPercent = profilesData.map((profile: any) => {
@@ -300,6 +303,39 @@ export default function AdminContent() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Event Name Management */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Event Name</h2>
+            <button
+              onClick={() => setEditingEventName(!editingEventName)}
+              className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
+            >
+              {editingEventName ? 'Cancel' : 'Edit Name'}
+            </button>
+          </div>
+
+          {editingEventName ? (
+            <EventNameForm
+              initialName={eventName || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth"}
+              onSuccess={() => {
+                setEditingEventName(false)
+                fetchData()
+              }}
+              onCancel={() => setEditingEventName(false)}
+            />
+          ) : (
+            <div className="space-y-2">
+              <div>
+                <span className="text-sm text-gray-600">Event Name: </span>
+                <span className="font-semibold">
+                  {eventName || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth"}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Stag Dates Management */}

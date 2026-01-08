@@ -79,7 +79,7 @@ export async function POST(
         suggested_amount: 200.00,
         days_away: 7,
       },
-      event_name: process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth",
+      event_name: (await supabase.from('stag_dates').select('event_name').order('created_at', { ascending: false }).limit(1).single()).data?.event_name || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth",
       bank_account_name: process.env.NEXT_PUBLIC_STAG_BANK_ACCOUNT_NAME || 'Test Bank Account',
       bank_account_number: process.env.NEXT_PUBLIC_STAG_BANK_ACCOUNT_NUMBER || '12345678',
       bank_sort_code: process.env.NEXT_PUBLIC_STAG_BANK_SORT_CODE || '12-34-56',

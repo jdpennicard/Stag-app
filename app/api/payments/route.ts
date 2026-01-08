@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
             note: payment.note || undefined,
             created_at: payment.created_at,
           },
-          event_name: process.env.NEXT_PUBLIC_STAG_EVENT_NAME,
+          event_name: (await supabase.from('stag_dates').select('event_name').order('created_at', { ascending: false }).limit(1).single()).data?.event_name || process.env.NEXT_PUBLIC_STAG_EVENT_NAME,
           bank_account_name: process.env.NEXT_PUBLIC_STAG_BANK_ACCOUNT_NAME,
           bank_account_number: process.env.NEXT_PUBLIC_STAG_BANK_ACCOUNT_NUMBER,
           bank_sort_code: process.env.NEXT_PUBLIC_STAG_BANK_SORT_CODE,

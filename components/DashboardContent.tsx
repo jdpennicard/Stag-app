@@ -15,7 +15,7 @@ interface DashboardContentProps {
   profile: Profile
   payments: Payment[]
   deadlines: Deadline[]
-  stagDates?: { start_date: string; end_date?: string | null }
+  stagDates?: { start_date: string; end_date?: string | null; event_name?: string | null }
   confirmedTotal: number
   pendingTotal: number
   remaining: number
@@ -128,7 +128,7 @@ export default function DashboardContent({
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold mb-2">
-                {process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth"}
+                {stagDates?.event_name || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth"}
               </h1>
               <p className="text-gray-600">Welcome, {profile.full_name}</p>
             </div>
