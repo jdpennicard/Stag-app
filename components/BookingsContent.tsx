@@ -78,7 +78,7 @@ export default function BookingsContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div>
       <div className="max-w-6xl mx-auto">
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
@@ -88,10 +88,9 @@ export default function BookingsContent() {
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Bookings - Admin</h1>
+              <h1 className="text-3xl font-bold mb-2">Bookings</h1>
               <p className="text-gray-600">Track expenses and bookings</p>
             </div>
-            <Navigation />
           </div>
         </div>
 

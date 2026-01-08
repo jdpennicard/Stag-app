@@ -1,8 +1,14 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser, ensureAdminStatus } from '@/lib/auth'
-import BookingsContent from '@/components/BookingsContent'
+import AdminPanel from '@/components/AdminPanel'
 
-export default async function BookingsPage() {
+const VALID_TABS = ['event-info', 'attendees', 'payments', 'bookings', 'email-templates']
+
+export default async function AdminTabPage({
+  params,
+}: {
+  params: { tab: string }
+}) {
   const user = await getCurrentUser()
   if (!user) {
     redirect('/')
@@ -23,6 +29,11 @@ export default async function BookingsPage() {
     redirect('/dashboard')
   }
 
-  return <BookingsContent />
+  // Validate tab
+  if (!VALID_TABS.includes(params.tab)) {
+    redirect('/admin/event-info')
+  }
+
+  return <AdminPanel />
 }
 

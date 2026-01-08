@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Navigation from './Navigation'
 import { getAvailableVariablesList } from '@/lib/email/variables'
 
 interface EmailTemplate {
@@ -131,7 +130,7 @@ export default function EmailTemplatesContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div>
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center">
@@ -139,7 +138,6 @@ export default function EmailTemplatesContent() {
               <h1 className="text-3xl font-bold mb-2">Email Templates</h1>
               <p className="text-gray-600">Manage email templates for automated notifications</p>
             </div>
-            <Navigation isAdmin={true} />
           </div>
         </div>
 

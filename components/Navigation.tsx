@@ -36,28 +36,14 @@ export default function Navigation({ isAdmin }: { isAdmin?: boolean }) {
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Admin-only links (top section) */}
+      {/* Admin-only link */}
       {adminStatus && (
-        <div className="flex gap-4 items-center">
-          <a 
-            href="/admin" 
-            className={`text-sm ${pathname === '/admin' ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}
-          >
-            Payments - Admin
-          </a>
-          <a 
-            href="/admin/bookings" 
-            className={`text-sm ${pathname === '/admin/bookings' ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}
-          >
-            Bookings - Admin
-          </a>
-          <a 
-            href="/admin/email-templates" 
-            className={`text-sm ${pathname === '/admin/email-templates' ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}
-          >
-            Email Templates
-          </a>
-        </div>
+        <a 
+          href="/admin/event-info" 
+          className={`text-sm ${pathname?.startsWith('/admin') ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}
+        >
+          Admin Panel
+        </a>
       )}
       
       {/* All users can see Payment - Home and Stag Info Central (bottom section) */}
