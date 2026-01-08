@@ -81,7 +81,33 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { name, subject, body_text, body_html, description, event_type, enabled } = body
+    const { name, subject, body_text, body_html, description, event_type, enabled, reminder_days } = body
+
+    // Get current template to check event_type
+    const supabase = createServerClient()
+    const { data: currentTemplate } = await supabase
+      .from('email_templates')
+      .select('event_type')
+      .eq('id', params.id)
+      .single()
+
+    const finalEventType = event_type !== undefined ? event_type : currentTemplate?.event_type
+
+    // Validate reminder_days if event_type is deadline_reminder
+    if (finalEventType === 'deadline_reminder' && reminder_days !== undefined) {
+      if (!Array.isArray(reminder_days) || reminder_days.length === 0) {
+        return NextResponse.json(
+          { error: 'reminder_days must be a non-empty array for deadline_reminder templates' },
+          { status: 400 }
+        )
+      }
+      if (!reminder_days.every((d: any) => Number.isInteger(d) && d >= 0)) {
+        return NextResponse.json(
+          { error: 'reminder_days must be an array of non-negative integers' },
+          { status: 400 }
+        )
+      }
+    }
 
     const updateData: any = {
       updated_at: new Date().toISOString(),
@@ -94,8 +120,10 @@ export async function PATCH(
     if (description !== undefined) updateData.description = description
     if (event_type !== undefined) updateData.event_type = event_type
     if (enabled !== undefined) updateData.enabled = enabled
+    if (reminder_days !== undefined) {
+      updateData.reminder_days = finalEventType === 'deadline_reminder' ? reminder_days : null
+    }
 
-    const supabase = createServerClient()
     const { data: template, error } = await supabase
       .from('email_templates')
       .update(updateData)

@@ -41,32 +41,26 @@ export async function GET(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Get all enabled reminder schedules
-    const { data: schedules, error: schedulesError } = await supabase
-      .from('deadline_reminder_schedules')
-      .select(`
-        *,
-        email_templates (
-          id,
-          name,
-          event_type,
-          enabled
-        )
-      `)
+    // Get all enabled deadline_reminder templates with reminder_days configured
+    const { data: templates, error: templatesError } = await supabase
+      .from('email_templates')
+      .select('*')
+      .eq('event_type', 'deadline_reminder')
       .eq('enabled', true)
+      .not('reminder_days', 'is', null)
 
-    if (schedulesError) {
-      console.error('Error fetching reminder schedules:', schedulesError)
+    if (templatesError) {
+      console.error('Error fetching reminder templates:', templatesError)
       return NextResponse.json(
-        { error: 'Failed to fetch reminder schedules', details: schedulesError.message },
+        { error: 'Failed to fetch reminder templates', details: templatesError.message },
         { status: 500 }
       )
     }
 
-    if (!schedules || schedules.length === 0) {
+    if (!templates || templates.length === 0) {
       return NextResponse.json({
         success: true,
-        message: 'No reminder schedules configured',
+        message: 'No deadline reminder templates configured',
         remindersSent: 0,
       })
     }
@@ -77,68 +71,68 @@ export async function GET(request: NextRequest) {
     let totalRemindersSent = 0
     const errors: string[] = []
 
-    // Process each schedule
-    for (const schedule of schedules) {
-      const template = schedule.email_templates as any
-
-      // Skip if template is disabled
-      if (!template || !template.enabled) {
-        console.warn(`Skipping schedule ${schedule.id}: template is disabled`)
+    // Process each template
+    for (const template of templates) {
+      const reminderDays = template.reminder_days as number[]
+      if (!reminderDays || reminderDays.length === 0) {
         continue
       }
 
-      // Calculate target date (deadline date - days_before)
-      const targetDate = new Date(today)
-      targetDate.setDate(targetDate.getDate() + schedule.days_before)
+      // Process each reminder day for this template
+      for (const daysBefore of reminderDays) {
+        // Calculate target date (deadline date - days_before)
+        const targetDate = new Date(today)
+        targetDate.setDate(targetDate.getDate() + daysBefore)
 
-      // Find deadlines that match this target date
-      const { data: deadlines, error: deadlinesError } = await supabase
-        .from('payment_deadlines')
-        .select('*')
-        .eq('due_date', targetDate.toISOString().split('T')[0]) // Compare date only
-
-      if (deadlinesError) {
-        console.error(`Error fetching deadlines for schedule ${schedule.id}:`, deadlinesError)
-        errors.push(`Failed to fetch deadlines for ${schedule.days_before} days schedule`)
-        continue
-      }
-
-      if (!deadlines || deadlines.length === 0) {
-        // No deadlines match this date - that's fine, just continue
-        continue
-      }
-
-      // For each deadline, find profiles with remaining balance
-      for (const deadline of deadlines) {
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
+        // Find deadlines that match this target date
+        const { data: deadlines, error: deadlinesError } = await supabase
+          .from('payment_deadlines')
           .select('*')
-          .eq('is_admin', false)
-          .not('email', 'is', null) // Only profiles with emails
-          .not('user_id', 'is', null) // Only claimed profiles
+          .eq('due_date', targetDate.toISOString().split('T')[0]) // Compare date only
 
-        if (profilesError) {
-          console.error(`Error fetching profiles for deadline ${deadline.id}:`, profilesError)
-          errors.push(`Failed to fetch profiles for deadline ${deadline.label}`)
+        if (deadlinesError) {
+          console.error(`Error fetching deadlines for ${daysBefore} days:`, deadlinesError)
+          errors.push(`Failed to fetch deadlines for ${daysBefore} days reminder`)
           continue
         }
 
-        if (!profiles || profiles.length === 0) {
+        if (!deadlines || deadlines.length === 0) {
+          // No deadlines match this date - that's fine, just continue
           continue
         }
 
-        // Process each profile
-        for (const profile of profiles) {
-          // Check if we've already sent a reminder today for this schedule/deadline/profile
-          const todayStr = today.toISOString().split('T')[0]
-          const { data: existingLog } = await supabase
-            .from('deadline_reminder_log')
-            .select('id')
-            .eq('schedule_id', schedule.id)
-            .eq('deadline_id', deadline.id)
-            .eq('profile_id', profile.id)
-            .eq('sent_date', todayStr)
-            .single()
+        // For each deadline, find profiles with remaining balance
+        for (const deadline of deadlines) {
+          const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('is_admin', false)
+            .not('email', 'is', null) // Only profiles with emails
+            .not('user_id', 'is', null) // Only claimed profiles
+
+          if (profilesError) {
+            console.error(`Error fetching profiles for deadline ${deadline.id}:`, profilesError)
+            errors.push(`Failed to fetch profiles for deadline ${deadline.label}`)
+            continue
+          }
+
+          if (!profiles || profiles.length === 0) {
+            continue
+          }
+
+          // Process each profile
+          for (const profile of profiles) {
+            // Check if we've already sent a reminder today for this template/deadline/profile/day
+            const todayStr = today.toISOString().split('T')[0]
+            const { data: existingLog } = await supabase
+              .from('deadline_reminder_log')
+              .select('id')
+              .eq('template_id', template.id)
+              .eq('deadline_id', deadline.id)
+              .eq('profile_id', profile.id)
+              .eq('days_before', daysBefore)
+              .eq('sent_date', todayStr)
+              .single()
 
           if (existingLog) {
             // Already sent today, skip
@@ -205,27 +199,30 @@ export async function GET(request: NextRequest) {
             { logEmail: true }
           )
 
-          if (emailResult.success) {
-            // Log the reminder
-            await supabase
-              .from('deadline_reminder_log')
-              .insert({
-                schedule_id: schedule.id,
-                deadline_id: deadline.id,
-                profile_id: profile.id,
-                sent_date: todayStr, // Explicitly set the date
-                email_log_id: emailResult.messageId ? undefined : undefined, // Could link to email_log if needed
-              })
-              .catch((err) => {
-                console.error('Failed to log reminder:', err)
+            if (emailResult.success) {
+              // Log the reminder (don't fail if logging fails)
+              try {
+                await supabase
+                  .from('deadline_reminder_log')
+                  .insert({
+                    template_id: template.id,
+                    deadline_id: deadline.id,
+                    profile_id: profile.id,
+                    days_before: daysBefore,
+                    sent_date: todayStr, // Explicitly set the date
+                    email_log_id: emailResult.messageId ? undefined : undefined, // Could link to email_log if needed
+                  })
+              } catch (logErr) {
+                console.error('Failed to log reminder:', logErr)
                 // Don't fail the whole process if logging fails
-              })
+              }
 
-            totalRemindersSent++
-          } else {
-            errors.push(
-              `Failed to send reminder to ${profile.email} for deadline ${deadline.label}: ${emailResult.error}`
-            )
+              totalRemindersSent++
+            } else {
+              errors.push(
+                `Failed to send reminder to ${profile.email} for deadline ${deadline.label}: ${emailResult.error}`
+              )
+            }
           }
         }
       }
@@ -233,7 +230,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Processed ${schedules.length} reminder schedule(s)`,
+      message: `Processed ${templates.length} reminder template(s)`,
       remindersSent: totalRemindersSent,
       errors: errors.length > 0 ? errors : undefined,
     })

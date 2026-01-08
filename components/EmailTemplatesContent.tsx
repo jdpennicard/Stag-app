@@ -13,6 +13,7 @@ interface EmailTemplate {
   description?: string
   event_type: string
   enabled: boolean
+  reminder_days?: number[] // Array of days before deadline (only for deadline_reminder)
   created_at: string
   updated_at: string
 }
@@ -441,10 +442,23 @@ function TemplateForm({
   const [description, setDescription] = useState(template?.description || '')
   const [eventType, setEventType] = useState(template?.event_type || 'signup')
   const [enabled, setEnabled] = useState(template?.enabled !== undefined ? template.enabled : true)
+  const [reminderDays, setReminderDays] = useState<string>(
+    template?.reminder_days?.join(', ') || ''
+  )
   const [showPreview, setShowPreview] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Parse reminder days (comma-separated integers)
+    let parsedReminderDays: number[] | undefined = undefined
+    if (eventType === 'deadline_reminder' && reminderDays.trim()) {
+      parsedReminderDays = reminderDays
+        .split(',')
+        .map(d => parseInt(d.trim()))
+        .filter(d => !isNaN(d) && d >= 0)
+    }
+    
     onSave({
       name,
       subject,
@@ -453,6 +467,7 @@ function TemplateForm({
       description: description || undefined,
       event_type: eventType,
       enabled,
+      reminder_days: parsedReminderDays,
     })
   }
 
@@ -522,6 +537,25 @@ function TemplateForm({
             ))}
           </select>
         </div>
+
+        {eventType === 'deadline_reminder' && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Reminder Days <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={reminderDays}
+              onChange={(e) => setReminderDays(e.target.value)}
+              required={eventType === 'deadline_reminder'}
+              placeholder="7, 2"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Comma-separated list of days before deadline to send reminders (e.g., "7, 2" for 7 days and 2 days before)
+            </p>
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
