@@ -19,8 +19,8 @@
 ## Current Setup
 
 ### Active Branches:
-- **`main`**: Production (stable, live)
-- **`feature/deadline-reminder-cron`**: Development branch for deadline reminder feature
+- **`main`**: Production (stable, live) ✅
+- **No active feature branches** - All features have been merged to production
 
 ---
 
@@ -139,19 +139,45 @@ git push origin feature/deadline-reminder-cron  # Push feature branch
 
 ## Current Status
 
-- **Production**: `main` branch → `https://owens-stag.com` ✅ Stable
-- **Development**: `feature/deadline-reminder-cron` → Preview URL (when pushed) 🚧 In Progress
+- **Production**: `main` branch → `https://owens-stag.com` ✅ Stable & Live
+- **Development**: No active feature branches - create new branch when starting new features
 
 ---
 
-## Next Steps for Deadline Reminder
+## Creating New Features
 
-1. **Create the cron job route**: `app/api/cron/deadline-reminders/route.ts`
-2. **Add to vercel.json**: Add cron schedule entry
-3. **Test locally**: Use `npm run dev` and test the endpoint
-4. **Push to feature branch**: Creates preview deployment
-5. **Test preview**: Verify it works on preview URL
-6. **Merge to main**: When ready, merge to go live
+When starting a new feature:
+
+1. **Create feature branch from main**:
+   ```bash
+   git checkout main
+   git pull origin main
+   git checkout -b feature/your-feature-name
+   ```
+
+2. **Develop and test locally**
+
+3. **Push to create preview deployment**:
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+   - Vercel automatically creates a preview URL
+   - Production is NOT affected
+
+4. **Test on preview deployment**
+
+5. **Merge to main when ready**:
+   ```bash
+   git checkout main
+   git merge feature/your-feature-name
+   git push origin main
+   ```
+
+6. **Clean up after merge**:
+   ```bash
+   git branch -d feature/your-feature-name
+   git push origin --delete feature/your-feature-name
+   ```
 
 You're all set! 🚀
 
