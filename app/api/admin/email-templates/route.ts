@@ -71,13 +71,30 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { name, subject, body_text, body_html, description, event_type, enabled } = body
+    const { name, subject, body_text, body_html, description, event_type, enabled, reminder_days } = body
 
     if (!name || !subject || !body_text || !event_type) {
       return NextResponse.json(
         { error: 'Missing required fields: name, subject, body_text, event_type' },
         { status: 400 }
       )
+    }
+
+    // Validate reminder_days for deadline_reminder templates
+    if (event_type === 'deadline_reminder') {
+      if (!reminder_days || !Array.isArray(reminder_days) || reminder_days.length === 0) {
+        return NextResponse.json(
+          { error: 'reminder_days is required for deadline_reminder templates' },
+          { status: 400 }
+        )
+      }
+      // Validate all are positive integers
+      if (!reminder_days.every((d: any) => Number.isInteger(d) && d >= 0)) {
+        return NextResponse.json(
+          { error: 'reminder_days must be an array of non-negative integers' },
+          { status: 400 }
+        )
+      }
     }
 
     const supabase = createServerClient()
@@ -91,6 +108,7 @@ export async function POST(request: NextRequest) {
         description: description || null,
         event_type,
         enabled: enabled !== undefined ? enabled : true,
+        reminder_days: event_type === 'deadline_reminder' ? reminder_days : null,
       })
       .select()
       .single()

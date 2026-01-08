@@ -694,6 +694,11 @@ function ProfileActionsDropdown({
   const [sendLinkLoading, setSendLinkLoading] = useState(false)
   const [sendLinkSuccess, setSendLinkSuccess] = useState(false)
   const [sendLinkError, setSendLinkError] = useState<string | null>(null)
+  const [showLinkProfile, setShowLinkProfile] = useState(false)
+  const [linkProfileEmail, setLinkProfileEmail] = useState('')
+  const [linkProfileLoading, setLinkProfileLoading] = useState(false)
+  const [linkProfileError, setLinkProfileError] = useState<string | null>(null)
+  const [linkProfileSuccess, setLinkProfileSuccess] = useState(false)
 
   // Close dropdown when clicking outside
   useEffect(() => {
