@@ -1244,6 +1244,86 @@ function ProfileActionsDropdown({
   )
 }
 
+// Event Name Form Component
+function EventNameForm({ 
+  initialName, 
+  onSuccess, 
+  onCancel 
+}: { 
+  initialName: string
+  onSuccess: () => void
+  onCancel: () => void 
+}) {
+  const [eventName, setEventName] = useState(initialName)
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!eventName || eventName.trim() === '') {
+      alert('Event name is required')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/admin/event-name', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          event_name: eventName.trim(),
+        }),
+      })
+
+      if (res.ok) {
+        onSuccess()
+      } else {
+        const data = await res.json()
+        const errorMsg = data.details 
+          ? `${data.error}\n\nDetails: ${data.details}`
+          : data.error || 'Failed to update event name'
+        alert(errorMsg)
+      }
+    } catch (err: any) {
+      console.error('Error updating event name:', err)
+      alert(`Failed to update event name: ${err.message || 'Unknown error'}`)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium mb-1">Event Name</label>
+        <input
+          type="text"
+          value={eventName}
+          onChange={(e) => setEventName(e.target.value)}
+          placeholder="e.g., Owen's Stag 2026 - Bournemouth"
+          className="w-full px-3 py-2 border rounded-md"
+          required
+        />
+        <p className="text-xs text-gray-500 mt-1">This name will appear in the dashboard header and in email templates</p>
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 disabled:opacity-50"
+        >
+          {submitting ? 'Saving...' : 'Save Name'}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  )
+}
 
 // Stag Dates Form Component
 function StagDatesForm({ 
