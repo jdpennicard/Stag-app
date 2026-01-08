@@ -20,6 +20,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS deadline_reminder_log_unique_daily
 -- Add RLS policies
 ALTER TABLE deadline_reminder_log ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies if they exist (for idempotency)
+DROP POLICY IF EXISTS "Admins can view deadline reminder logs" ON deadline_reminder_log;
+DROP POLICY IF EXISTS "Service role can manage deadline reminder logs" ON deadline_reminder_log;
+
 -- Admins can view all logs
 CREATE POLICY "Admins can view deadline reminder logs"
   ON deadline_reminder_log
