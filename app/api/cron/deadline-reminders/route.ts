@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
           const { data: profiles, error: profilesError } = await supabase
             .from('profiles')
             .select('*')
-            .eq('is_admin', false)
+            // Include both admins and non-admins (removed .eq('is_admin', false))
             .not('email', 'is', null) // Only profiles with emails
             .not('user_id', 'is', null) // Only claimed profiles
 
