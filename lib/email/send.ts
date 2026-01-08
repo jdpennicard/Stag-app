@@ -94,7 +94,7 @@ export async function sendTemplateEmail(
     logEmail?: boolean
     supabaseClient?: ReturnType<typeof createServerClient> | ReturnType<typeof createClient>
   }
-): Promise<{ success: boolean; messageId?: string; error?: string; templateId?: string }> {
+): Promise<{ success: boolean; messageId?: string; error?: string; templateId?: string; emailLogId?: string }> {
   const template = await getEmailTemplate(templateNameOrEventType, options?.supabaseClient)
   
   if (!template) {
@@ -121,8 +121,9 @@ export async function sendTemplateEmail(
   })
 
   // Log the email if requested (default: true)
+  let emailLogId: string | null = null
   if (options?.logEmail !== false && result.success) {
-    await logEmail({
+    emailLogId = await logEmail({
       templateId: template.id,
       templateName: template.name,
       recipientEmail,
@@ -135,7 +136,7 @@ export async function sendTemplateEmail(
       messageId: result.messageId,
     }, options?.supabaseClient)
   } else if (options?.logEmail !== false && !result.success) {
-    await logEmail({
+    emailLogId = await logEmail({
       templateId: template.id,
       templateName: template.name,
       recipientEmail,
@@ -152,11 +153,13 @@ export async function sendTemplateEmail(
   return {
     ...result,
     templateId: template.id,
+    emailLogId: emailLogId || undefined,
   }
 }
 
 /**
  * Log an email to the database
+ * Returns the email_log ID if successful
  */
 async function logEmail(
   data: {
@@ -173,7 +176,7 @@ async function logEmail(
     errorMessage?: string
   },
   supabaseClient?: ReturnType<typeof createServerClient> | ReturnType<typeof createClient>
-): Promise<void> {
+): Promise<string | null> {
   try {
     // Use service role key to bypass RLS for logging
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -181,7 +184,7 @@ async function logEmail(
 
     if (!supabaseUrl || !supabaseServiceKey) {
       console.warn('Cannot log email - Supabase credentials missing')
-      return
+      return null
     }
 
     // Always use service role client for logging (bypasses RLS)
@@ -196,7 +199,7 @@ async function logEmail(
           }
         })
 
-    await supabaseAdmin.from('email_log').insert({
+    const { data: insertedData, error } = await supabaseAdmin.from('email_log').insert({
       template_id: data.templateId,
       template_name: data.templateName,
       recipient_email: data.recipientEmail,
@@ -208,10 +211,18 @@ async function logEmail(
       status: data.status,
       error_message: data.errorMessage,
       sent_at: data.status === 'sent' ? new Date().toISOString() : null,
-    })
+    }).select('id').single()
+
+    if (error) {
+      console.error('Error logging email:', error)
+      return null
+    }
+
+    return insertedData?.id || null
   } catch (err) {
     console.error('Error logging email:', err)
     // Don't throw - email logging failure shouldn't break email sending
+    return null
   }
 }
 

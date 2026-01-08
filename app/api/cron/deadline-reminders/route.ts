@@ -326,7 +326,7 @@ export async function GET(request: NextRequest) {
                     profile_id: profile.id,
                     days_before: daysBefore,
                     sent_date: todayStr, // Explicitly set the date
-                    email_log_id: emailResult.messageId || null, // Link to email_log if available
+                    email_log_id: emailResult.emailLogId || null, // Link to email_log if available
                   })
                 
                 if (logError) {
