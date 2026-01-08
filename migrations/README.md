@@ -26,6 +26,7 @@ This folder contains SQL migration scripts for the Stag App database.
 16. **create-deadline-reminder-log.sql** - Creates deadline_reminder_log table to track sent reminder emails and prevent duplicates
 17. **update-reminder-log-for-templates.sql** - Updates deadline_reminder_log table to work with templates instead of separate schedules table (run after #16)
 18. **add-stag-dates.sql** - Creates stag_dates table to store stag/hen event start and end dates (replaces NEXT_PUBLIC_STAG_DATE env variable)
+19. **fix-payment-deadlines-rls.sql** - Fixes RLS policy for payment_deadlines table to properly support UPDATE operations (adds WITH CHECK clause)
 
 ## Notes
 
