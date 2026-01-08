@@ -135,15 +135,28 @@ export async function GET(request: NextRequest) {
           for (const profile of profiles) {
             // Check if we've already sent a reminder today for this template/deadline/profile/day
             const todayStr = today.toISOString().split('T')[0]
-            const { data: existingLog } = await supabase
-              .from('deadline_reminder_log')
-              .select('id')
-              .eq('template_id', template.id)
-              .eq('deadline_id', deadline.id)
-              .eq('profile_id', profile.id)
-              .eq('days_before', daysBefore)
-              .eq('sent_date', todayStr)
-              .single()
+            let existingLog = null
+            try {
+              const { data, error } = await supabase
+                .from('deadline_reminder_log')
+                .select('id')
+                .eq('template_id', template.id)
+                .eq('deadline_id', deadline.id)
+                .eq('profile_id', profile.id)
+                .eq('days_before', daysBefore)
+                .eq('sent_date', todayStr)
+                .single()
+              
+              if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+                console.error('Error checking existing log:', error)
+                // Continue anyway - don't fail the whole process
+              } else if (data) {
+                existingLog = data
+              }
+            } catch (err: any) {
+              console.error('Exception checking existing log:', err)
+              // Continue anyway - table might not exist yet
+            }
 
           if (existingLog) {
             // Already sent today, skip
@@ -213,7 +226,7 @@ export async function GET(request: NextRequest) {
             if (emailResult.success) {
               // Log the reminder (don't fail if logging fails)
               try {
-                await supabase
+                const { error: logError } = await supabase
                   .from('deadline_reminder_log')
                   .insert({
                     template_id: template.id,
@@ -221,10 +234,15 @@ export async function GET(request: NextRequest) {
                     profile_id: profile.id,
                     days_before: daysBefore,
                     sent_date: todayStr, // Explicitly set the date
-                    email_log_id: emailResult.messageId ? undefined : undefined, // Could link to email_log if needed
+                    email_log_id: emailResult.messageId || null, // Link to email_log if available
                   })
-              } catch (logErr) {
-                console.error('Failed to log reminder:', logErr)
+                
+                if (logError) {
+                  console.error('Failed to log reminder:', logError)
+                  // Don't fail the whole process if logging fails
+                }
+              } catch (logErr: any) {
+                console.error('Exception logging reminder:', logErr)
                 // Don't fail the whole process if logging fails
               }
 
@@ -247,10 +265,13 @@ export async function GET(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Error in deadline-reminders cron:', error)
+    console.error('Error stack:', error.stack)
+    console.error('Error details:', JSON.stringify(error, null, 2))
     return NextResponse.json(
       {
         success: false,
         error: error.message || 'Internal server error',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       },
       { status: 500 }
     )
