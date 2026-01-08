@@ -50,7 +50,39 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+
+    // Verify the deadline_reminder_log table exists (check by trying to query it)
+    try {
+      const { error: tableCheckError } = await supabase
+        .from('deadline_reminder_log')
+        .select('id')
+        .limit(0)
+      
+      if (tableCheckError && tableCheckError.code === '42P01') {
+        // Table doesn't exist
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'deadline_reminder_log table does not exist',
+            message: 'Please run the migration: migrations/create-deadline-reminder-log.sql in Supabase SQL Editor',
+            hint: 'This table is required for the deadline reminders cron job to work'
+          },
+          { status: 500 }
+        )
+      } else if (tableCheckError && tableCheckError.code !== 'PGRST116') {
+        // Some other error (PGRST116 is "no rows" which is fine)
+        console.warn('Warning checking deadline_reminder_log table:', tableCheckError)
+      }
+    } catch (err: any) {
+      console.error('Exception checking deadline_reminder_log table:', err)
+      // Continue anyway - might be a transient error
+    }
 
     // Get all enabled deadline_reminder templates with reminder_days configured
     const { data: templates, error: templatesError } = await supabase
@@ -62,8 +94,15 @@ export async function GET(request: NextRequest) {
 
     if (templatesError) {
       console.error('Error fetching reminder templates:', templatesError)
+      console.error('Supabase URL:', supabaseUrl ? 'Set' : 'Missing')
+      console.error('Service Role Key:', supabaseKey ? 'Set (length: ' + supabaseKey.length + ')' : 'Missing')
       return NextResponse.json(
-        { error: 'Failed to fetch reminder templates', details: templatesError.message },
+        { 
+          error: 'Failed to fetch reminder templates', 
+          details: templatesError.message,
+          code: templatesError.code,
+          hint: templatesError.hint
+        },
         { status: 500 }
       )
     }
@@ -164,16 +203,27 @@ export async function GET(request: NextRequest) {
           }
 
           // Calculate remaining balance
-          const { data: payments } = await supabase
-            .from('payments')
-            .select('amount, status')
-            .eq('user_id', profile.user_id)
-            .eq('status', 'confirmed')
+          let confirmedFromPayments = 0
+          try {
+            const { data: payments, error: paymentsError } = await supabase
+              .from('payments')
+              .select('amount, status')
+              .eq('user_id', profile.user_id)
+              .eq('status', 'confirmed')
 
-          const confirmedFromPayments = payments?.reduce(
-            (sum, p) => sum + Number(p.amount),
-            0
-          ) || 0
+            if (paymentsError) {
+              console.error(`Error fetching payments for profile ${profile.id}:`, paymentsError)
+              // Continue with 0 if we can't fetch payments
+            } else {
+              confirmedFromPayments = payments?.reduce(
+                (sum, p) => sum + Number(p.amount),
+                0
+              ) || 0
+            }
+          } catch (err: any) {
+            console.error(`Exception fetching payments for profile ${profile.id}:`, err)
+            // Continue with 0 if there's an error
+          }
 
           const confirmedTotal = Number(profile.initial_confirmed_paid) + confirmedFromPayments
           const totalDue = Number(profile.total_due) || 0

@@ -32,7 +32,9 @@ CREATE POLICY "Admins can view deadline reminder logs"
     )
   );
 
--- Service role can do everything (for cron jobs)
+-- Note: Service role key bypasses RLS entirely, so no policy needed for it
+-- But we add this policy for completeness (though it won't be used with service role)
+-- This allows the service role to work even if RLS is enabled
 CREATE POLICY "Service role can manage deadline reminder logs"
   ON deadline_reminder_log
   FOR ALL
