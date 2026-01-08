@@ -94,28 +94,31 @@ export default function DashboardContent({
     })
   }
 
-  // Calculate countdowns
-  // Use the first deadline from database, fallback to env var, then default
+  // Calculate countdowns - only use dates if they exist (no fallbacks)
   const firstDeadline = deadlines && deadlines.length > 0 ? deadlines[0] : null
   const paymentDeadlineDate = firstDeadline?.due_date
     ? new Date(firstDeadline.due_date)
     : process.env.NEXT_PUBLIC_PAYMENT_DEADLINE 
     ? new Date(process.env.NEXT_PUBLIC_PAYMENT_DEADLINE)
-    : new Date('2026-02-01')
+    : null
   
-  // Use stag dates from database, fallback to env var, then default
+  // Use stag dates from database or env var (no fallback)
   const stagStartDate = stagDates?.start_date
     ? new Date(stagDates.start_date)
     : process.env.NEXT_PUBLIC_STAG_DATE
     ? new Date(process.env.NEXT_PUBLIC_STAG_DATE)
-    : new Date('2026-03-06')
+    : null
   const stagEndDate = stagDates?.end_date
     ? new Date(stagDates.end_date)
     : null
   
   const today = new Date()
-  const daysUntilPaymentDeadline = Math.ceil((paymentDeadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-  const daysUntilStag = Math.ceil((stagStartDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  const daysUntilPaymentDeadline = paymentDeadlineDate
+    ? Math.ceil((paymentDeadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    : null
+  const daysUntilStag = stagStartDate
+    ? Math.ceil((stagStartDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    : null
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
@@ -313,78 +316,84 @@ export default function DashboardContent({
           </div>
 
           {/* Right Column - Deadlines & Countdowns */}
-          <div className="space-y-6">
-            {/* Two Separate Countdown Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Payment Deadline - Left */}
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md p-5 text-white">
-                <div className="space-y-3">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Payment Deadline</h3>
-                    <p className="text-sm text-blue-100 mb-1">Deadline Date</p>
-                    <p className="text-lg font-bold">
-                      {paymentDeadlineDate.toLocaleDateString('en-GB', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })}
-                    </p>
+          {(paymentDeadlineDate || stagStartDate) && (
+            <div className="space-y-6">
+              {/* Two Separate Countdown Cards */}
+              <div className={`grid grid-cols-1 ${paymentDeadlineDate && stagStartDate ? 'md:grid-cols-2' : ''} gap-4`}>
+                {/* Payment Deadline - Left */}
+                {paymentDeadlineDate && (
+                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md p-5 text-white">
+                    <div className="space-y-3">
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Payment Deadline</h3>
+                        <p className="text-sm text-blue-100 mb-1">Deadline Date</p>
+                        <p className="text-lg font-bold">
+                          {paymentDeadlineDate.toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                          })}
+                        </p>
+                      </div>
+                      <div className="border-t border-blue-400 pt-3">
+                        <p className="text-sm text-blue-100 mb-1">Days Remaining</p>
+                        <p className="text-4xl font-bold">
+                          {daysUntilPaymentDeadline !== null && daysUntilPaymentDeadline <= 0 ? 'Overdue!' : daysUntilPaymentDeadline}
+                        </p>
+                        {daysUntilPaymentDeadline !== null && daysUntilPaymentDeadline > 0 && (
+                          <p className="text-sm text-blue-100 mt-1">
+                            {daysUntilPaymentDeadline === 1 ? 'day' : 'days'} until deadline
+                          </p>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="border-t border-blue-400 pt-3">
-                    <p className="text-sm text-blue-100 mb-1">Days Remaining</p>
-                    <p className="text-4xl font-bold">
-                      {daysUntilPaymentDeadline <= 0 ? 'Overdue!' : daysUntilPaymentDeadline}
-                    </p>
-                    {daysUntilPaymentDeadline > 0 && (
-                      <p className="text-sm text-blue-100 mt-1">
-                        {daysUntilPaymentDeadline === 1 ? 'day' : 'days'} until deadline
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
+                )}
 
-              {/* Stag Countdown - Right */}
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-md p-5 text-white">
-                <div className="space-y-3">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">Stag Countdown</h3>
-                    <p className="text-sm text-purple-100 mb-1">
-                      {stagEndDate ? 'Event Dates' : 'Event Date'}
-                    </p>
-                    <p className="text-lg font-bold">
-                      {stagStartDate.toLocaleDateString('en-GB', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })}
-                      {stagEndDate && stagEndDate.getTime() !== stagStartDate.getTime() && (
-                        <> - {stagEndDate.toLocaleDateString('en-GB', {
-                          day: 'numeric',
-                          month: 'long',
-                          year: 'numeric',
-                        })}</>
-                      )}
-                    </p>
-                  </div>
-                  <div className="border-t border-purple-400 pt-3">
-                    <p className="text-sm text-purple-100 mb-1">Days Until Stag</p>
-                    <p className="text-4xl font-bold">
-                      {daysUntilStag}
-                    </p>
-                    <p className="text-sm text-purple-100 mt-1">
-                      {daysUntilStag === 1 ? 'day' : 'days'} to go!
-                    </p>
-                  </div>
-                </div>
-                {daysUntilStag <= 30 && (
-                  <div className="bg-white/20 rounded-md p-2 mt-3">
-                    <p className="text-xs font-semibold text-center">🎉 Getting close!</p>
+                {/* Stag Countdown - Right */}
+                {stagStartDate && (
+                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-md p-5 text-white">
+                    <div className="space-y-3">
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Stag Countdown</h3>
+                        <p className="text-sm text-purple-100 mb-1">
+                          {stagEndDate ? 'Event Dates' : 'Event Date'}
+                        </p>
+                        <p className="text-lg font-bold">
+                          {stagStartDate.toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'long',
+                            year: 'numeric',
+                          })}
+                          {stagEndDate && stagEndDate.getTime() !== stagStartDate.getTime() && (
+                            <> - {stagEndDate.toLocaleDateString('en-GB', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric',
+                            })}</>
+                          )}
+                        </p>
+                      </div>
+                      <div className="border-t border-purple-400 pt-3">
+                        <p className="text-sm text-purple-100 mb-1">Days Until Stag</p>
+                        <p className="text-4xl font-bold">
+                          {daysUntilStag}
+                        </p>
+                        <p className="text-sm text-purple-100 mt-1">
+                          {daysUntilStag === 1 ? 'day' : 'days'} to go!
+                        </p>
+                      </div>
+                    </div>
+                    {daysUntilStag !== null && daysUntilStag <= 30 && (
+                      <div className="bg-white/20 rounded-md p-2 mt-3">
+                        <p className="text-xs font-semibold text-center">🎉 Getting close!</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
