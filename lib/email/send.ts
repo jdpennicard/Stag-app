@@ -157,19 +157,24 @@ async function logEmail(
   supabaseClient?: ReturnType<typeof createServerClient> | ReturnType<typeof createClient>
 ): Promise<void> {
   try {
-    let supabaseAdmin = supabaseClient
+    // Use service role key to bypass RLS for logging
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.warn('Cannot log email - Supabase credentials missing')
+      return
+    }
+
+    // Always use service role client for logging (bypasses RLS)
+    // This ensures consistent behavior whether called from cron or regular API
+    // If a client was passed, use it; otherwise create a new service role client
+    let supabaseAdmin: ReturnType<typeof createClient>
     
-    // If no client provided, create one using service role key
-    if (!supabaseAdmin) {
-      // Use service role key to bypass RLS for logging
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-      if (!supabaseUrl || !supabaseServiceKey) {
-        console.warn('Cannot log email - Supabase credentials missing')
-        return
-      }
-
+    if (supabaseClient) {
+      // Type assertion: both createServerClient and createClient return compatible types for our use case
+      supabaseAdmin = supabaseClient as ReturnType<typeof createClient>
+    } else {
       supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
         auth: {
           autoRefreshToken: false,
