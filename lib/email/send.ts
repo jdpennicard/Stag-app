@@ -21,11 +21,15 @@ export interface EmailTemplate {
 
 /**
  * Get a template from the database by name or event_type
+ * 
+ * @param templateNameOrEventType - Template name or event_type to find
+ * @param supabaseClient - Optional Supabase client (uses createServerClient if not provided)
  */
 export async function getEmailTemplate(
-  templateNameOrEventType: string
+  templateNameOrEventType: string,
+  supabaseClient?: ReturnType<typeof createServerClient> | ReturnType<typeof createClient>
 ): Promise<EmailTemplate | null> {
-  const supabase = createServerClient()
+  const supabase = supabaseClient || createServerClient()
   
   // Try to find by name first, then by event_type
   const { data: templateByName, error: errorByName } = await supabase
@@ -55,15 +59,25 @@ export async function getEmailTemplate(
 
 /**
  * Send an email using a template from the database
+ * 
+ * @param templateNameOrEventType - Template name or event_type to use
+ * @param recipientEmail - Recipient email address
+ * @param recipientName - Recipient name
+ * @param context - Email context with variables
+ * @param options - Optional settings including Supabase client for cron jobs
  */
 export async function sendTemplateEmail(
   templateNameOrEventType: string,
   recipientEmail: string,
   recipientName: string,
   context: EmailContext,
-  options?: { from?: string; logEmail?: boolean }
+  options?: { 
+    from?: string
+    logEmail?: boolean
+    supabaseClient?: ReturnType<typeof createServerClient> | ReturnType<typeof createClient>
+  }
 ): Promise<{ success: boolean; messageId?: string; error?: string; templateId?: string }> {
-  const template = await getEmailTemplate(templateNameOrEventType)
+  const template = await getEmailTemplate(templateNameOrEventType, options?.supabaseClient)
   
   if (!template) {
     return { 
@@ -101,7 +115,7 @@ export async function sendTemplateEmail(
       variablesUsed: extractVariablesUsed(context),
       status: 'sent',
       messageId: result.messageId,
-    })
+    }, options?.supabaseClient)
   } else if (options?.logEmail !== false && !result.success) {
     await logEmail({
       templateId: template.id,
@@ -114,7 +128,7 @@ export async function sendTemplateEmail(
       variablesUsed: extractVariablesUsed(context),
       status: 'failed',
       errorMessage: result.error,
-    })
+    }, options?.supabaseClient)
   }
 
   return {
@@ -126,35 +140,43 @@ export async function sendTemplateEmail(
 /**
  * Log an email to the database
  */
-async function logEmail(data: {
-  templateId: string
-  templateName: string
-  recipientEmail: string
-  recipientName: string
-  subject: string
-  bodyText: string
-  bodyHtml?: string
-  variablesUsed: Record<string, any>
-  status: 'pending' | 'sent' | 'failed'
-  messageId?: string
-  errorMessage?: string
-}): Promise<void> {
+async function logEmail(
+  data: {
+    templateId: string
+    templateName: string
+    recipientEmail: string
+    recipientName: string
+    subject: string
+    bodyText: string
+    bodyHtml?: string
+    variablesUsed: Record<string, any>
+    status: 'pending' | 'sent' | 'failed'
+    messageId?: string
+    errorMessage?: string
+  },
+  supabaseClient?: ReturnType<typeof createServerClient> | ReturnType<typeof createClient>
+): Promise<void> {
   try {
-    // Use service role key to bypass RLS for logging
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    let supabaseAdmin = supabaseClient
+    
+    // If no client provided, create one using service role key
+    if (!supabaseAdmin) {
+      // Use service role key to bypass RLS for logging
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-    if (!supabaseUrl || !supabaseServiceKey) {
-      console.warn('Cannot log email - Supabase credentials missing')
-      return
-    }
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
+      if (!supabaseUrl || !supabaseServiceKey) {
+        console.warn('Cannot log email - Supabase credentials missing')
+        return
       }
-    })
+
+      supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      })
+    }
 
     await supabaseAdmin.from('email_log').insert({
       template_id: data.templateId,

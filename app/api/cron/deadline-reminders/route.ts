@@ -264,13 +264,16 @@ export async function GET(request: NextRequest) {
               : undefined,
           }
 
-          // Send the email
+          // Send the email (pass supabase client for cron job context)
           const emailResult = await sendTemplateEmail(
             'deadline_reminder',
             profile.email,
             profile.full_name,
             context,
-            { logEmail: true }
+            { 
+              logEmail: true,
+              supabaseClient: supabase // Pass the service role client
+            }
           )
 
             if (emailResult.success) {
