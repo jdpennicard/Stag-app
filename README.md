@@ -15,6 +15,7 @@ A production-ready Next.js web application for managing payments for Owen's Stag
 - **Admin Payment Management**: Admins can add payments for any guest (including unclaimed profiles)
 - **Keep-Alive Mechanism**: Daily cron job prevents Supabase free tier projects from pausing
 - **Magic Link Signup**: Admins can generate unique signup links for guests - zero friction onboarding
+- **Email Notifications**: Full email system with Resend integration, admin-managed templates, and automated deadline reminders
 
 ## Tech Stack
 
@@ -70,11 +71,11 @@ A production-ready Next.js web application for managing payments for Owen's Stag
 3. Add all environment variables from `.env.local` to Vercel
 4. Deploy!
 
-**Keep-Alive Setup (Recommended for Supabase Free Tier):**
-- The app includes a daily cron job configured in `vercel.json` that pings the database to prevent Supabase from pausing your project
-- After deployment, the cron job will automatically run daily at midnight UTC
-- Optional: Set `KEEP_ALIVE_SECRET` environment variable in Vercel to secure the endpoint
-- You can verify it's working in Vercel Dashboard → Cron Jobs
+**Cron Jobs (Configured in `vercel.json`):**
+- **Keep-Alive**: Daily cron job at midnight UTC that pings the database to prevent Supabase from pausing your project (recommended for Supabase Free Tier)
+- **Deadline Reminders**: Daily cron job at 9 AM UTC that sends reminder emails based on configured email templates
+- Optional: Set `KEEP_ALIVE_SECRET` environment variable in Vercel to secure the keep-alive endpoint
+- You can verify cron jobs are working in Vercel Dashboard → Cron Jobs
 
 ## Database Schema
 
@@ -88,6 +89,9 @@ The app uses the following main tables:
 - **stag_info_links**: Links associated with posts
 - **weekends_plan_items**: Weekend itinerary items by date
 - **keep_alive_log**: Log table for keep-alive pings (prevents Supabase project pausing)
+- **email_templates**: Admin-managed email templates with variable substitution
+- **email_log**: Log of all emails sent through the system
+- **deadline_reminder_log**: Tracks sent deadline reminder emails to prevent duplicates
 
 See `supabase-setup.sql` for the complete schema. Additional migrations are in the `migrations/` folder.
 
@@ -128,26 +132,32 @@ See `supabase-setup.sql` for the complete schema. Additional migrations are in t
 | `NEXT_PUBLIC_PAYMENT_DEADLINE` | Next payment deadline (YYYY-MM-DD) | Optional |
 | `NEXT_PUBLIC_STAG_DATE` | Stag event date (YYYY-MM-DD) | Optional |
 | `KEEP_ALIVE_SECRET` | Secret token for keep-alive endpoint security | Optional |
+| `RESEND_API_KEY` | Resend API key for email sending | Required for emails |
+| `EMAIL_FROM` | Email address to send from (e.g., noreply@owens-stag.com) | Required for emails |
+| `NEXT_PUBLIC_APP_URL` | Full app URL (e.g., https://owens-stag.com) | Required for email links |
 
 ## Project Structure
 
 ```
 ├── app/
 │   ├── api/              # API routes
-│   │   ├── admin/        # Admin-only API routes
+│   │   ├── admin/        # Admin-only API routes (guests, payments, email templates)
+│   │   ├── cron/         # Cron job endpoints (keep-alive, deadline reminders)
 │   │   ├── payments/     # Payment management routes
 │   │   ├── profile/      # Profile management routes
+│   │   ├── email/        # Email sending routes
 │   │   └── stag-info/    # Stag Info Central routes
-│   ├── admin/            # Admin pages (Payments, Bookings)
+│   ├── admin/            # Admin pages (Payments, Bookings, Email Templates)
 │   ├── claim-profile/    # Profile claiming page
 │   ├── dashboard/        # Guest dashboard (Payment - Home)
 │   ├── stag-info/        # Stag Info Central page
 │   └── page.tsx          # Landing/auth page
 ├── components/           # React components
 ├── lib/                  # Utilities and Supabase clients
+│   └── email/            # Email system (client, templates, variables)
 ├── migrations/           # Database migration scripts
 ├── supabase-setup.sql    # Main database schema
-└── vercel.json           # Vercel configuration (includes keep-alive cron job)
+└── vercel.json           # Vercel configuration (includes cron jobs)
 ```
 
 ## License

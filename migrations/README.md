@@ -22,6 +22,8 @@ This folder contains SQL migration scripts for the Stag App database.
 12. **add-signup-token.sql** - Adds signup_token and signup_token_expires_at columns for magic link signup
 13. **fix-signup-token-rls.sql** - Adds RLS policy to allow viewing profiles with valid signup tokens (required for magic links to work)
 14. **add-email-templates.sql** - Creates email_templates and email_log tables for admin-managed email templates with variable substitution
+15. **add-reminder-days-to-templates.sql** - Adds `reminder_days` column to email_templates for deadline reminder configuration
+16. **update-reminder-log-for-templates.sql** - Updates deadline_reminder_log table to work with templates instead of separate schedules table
 
 ## Notes
 
@@ -29,4 +31,15 @@ This folder contains SQL migration scripts for the Stag App database.
 - Always backup your database before running migrations
 - Run migrations in the Supabase SQL Editor
 - The keep-alive migration is optional but recommended to prevent Supabase free tier projects from pausing
+
+## Migration Order Summary
+
+**For a fresh database setup:**
+1. Run `supabase-setup.sql` first (in root directory)
+2. Run migrations in numerical order (1-16) as listed above
+3. All migrations can be run in a single session if needed
+
+**For existing databases:**
+- Check which features you need and run only the relevant migrations
+- Email templates (14-16) are required for the email notification system
 

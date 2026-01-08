@@ -11,6 +11,7 @@ Owen's Stag 2026 – Bournemouth
 **Note: This document is the original development plan. The following features have been completed:**
 - ✅ **Supabase Keep-Alive Mechanism**: Daily cron job prevents Supabase free tier projects from pausing (see `migrations/add-keep-alive-log.sql` and `vercel.json`)
 - ✅ **Magic Link Signup**: Admins can generate unique signup links for guests - zero friction onboarding (see `app/api/admin/generate-signup-link/route.ts` and `app/signup/[profileId]/[token]/page.tsx`)
+- ✅ **Email Notification System**: Full email template management system with Resend integration, admin UI, and automated deadline reminders via cron job (see `lib/email/`, `app/admin/email-templates/`, and `app/api/cron/deadline-reminders/route.ts`)
 
 The app will:
 

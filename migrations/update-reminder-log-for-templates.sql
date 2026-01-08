@@ -24,7 +24,7 @@ days_before = (
 WHERE schedule_id IS NOT NULL AND template_id IS NULL;
 
 -- Drop old unique index first (safe - this is a new table with no data)
--- The index was created in add-deadline-reminder-schedules.sql
+-- The index was created in the original add-deadline-reminder-schedules.sql migration
 DROP INDEX IF EXISTS deadline_reminder_log_unique_daily;
 
 -- Create new unique index with template_id and days_before
