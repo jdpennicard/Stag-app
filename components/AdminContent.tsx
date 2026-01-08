@@ -1247,57 +1247,57 @@ function DeadlineForm({ onSuccess, onCancel }: { onSuccess: () => void, onCancel
   }
 
   return (
-    <form onSubmit={handleSubmit} className=" space-y-4\>
- <div>
- <label className=\block text-sm font-medium mb-1\>Label</label>
- <input
- type=\text\
- value={label}
- onChange={(e) => setLabel(e.target.value)}
- placeholder=\e.g. Final Payment\
- className=\w-full px-3 py-2 border rounded-md\
- required
- />
- </div>
- <div>
- <label className=\block text-sm font-medium mb-1\>Due Date</label>
- <input
- type=\date\
- value={dueDate}
- onChange={(e) => setDueDate(e.target.value)}
- className=\w-full px-3 py-2 border rounded-md\
- required
- />
- </div>
- <div>
- <label className=\block text-sm font-medium mb-1\>Suggested Amount (optional)</label>
- <input
- type=\number\
- step=\0.01\
- value={suggestedAmount}
- onChange={(e) => setSuggestedAmount(e.target.value)}
- placeholder=\e.g. 500.00\
- className=\w-full px-3 py-2 border rounded-md\
- />
- </div>
- <div className=\flex gap-2\>
- <button
- type=\submit\
- disabled={submitting}
- className=\bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50\
- >
- {submitting ? 'Creating...' : 'Create Deadline'}
- </button>
- <button
- type=\button\
- onClick={onCancel}
- className=\bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400\
- >
- Cancel
- </button>
- </div>
- </form>
- )
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium mb-1">Label</label>
+        <input
+          type="text"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="e.g., Final Payment"
+          className="w-full px-3 py-2 border rounded-md"
+          required
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1">Due Date</label>
+        <input
+          type="date"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+          className="w-full px-3 py-2 border rounded-md"
+          required
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1">Suggested Amount (optional)</label>
+        <input
+          type="number"
+          step="0.01"
+          value={suggestedAmount}
+          onChange={(e) => setSuggestedAmount(e.target.value)}
+          placeholder="e.g., 500.00"
+          className="w-full px-3 py-2 border rounded-md"
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50"
+        >
+          {submitting ? 'Creating...' : 'Create Deadline'}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  )
 }
 
 // Deadline Edit Row Component
@@ -1314,45 +1314,45 @@ function DeadlineEditRow({ deadline, onSave, onCancel }: { deadline: Deadline, o
  })
  }
 
- return (
- <>
- <td colSpan={4} className=\py-2 px-4\>
- <div className=\flex gap-2 items-center\>
- <input
- type=\text\
- value={label}
- onChange={(e) => setLabel(e.target.value)}
- className=\flex-1 px-2 py-1 border rounded\
- placeholder=\Label\
- />
- <input
- type=\date\
- value={dueDate}
- onChange={(e) => setDueDate(e.target.value)}
- className=\px-2 py-1 border rounded\
- />
- <input
- type=\number\
- step=\0.01\
- value={suggestedAmount}
- onChange={(e) => setSuggestedAmount(e.target.value)}
- className=\w-32 px-2 py-1 border rounded\
- placeholder=\Amount\
- />
- <button
- onClick={handleSave}
- className=\bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700\
- >
- Save
- </button>
- <button
- onClick={onCancel}
- className=\bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-400\
- >
- Cancel
- </button>
- </div>
- </td>
- </>
- )
+  return (
+    <>
+      <td colSpan={4} className="py-2 px-4">
+        <div className="flex gap-2 items-center">
+          <input
+            type="text"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="flex-1 px-2 py-1 border rounded"
+            placeholder="Label"
+          />
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="px-2 py-1 border rounded"
+          />
+          <input
+            type="number"
+            step="0.01"
+            value={suggestedAmount}
+            onChange={(e) => setSuggestedAmount(e.target.value)}
+            className="w-32 px-2 py-1 border rounded"
+            placeholder="Amount"
+          />
+          <button
+            onClick={handleSave}
+            className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
+          >
+            Save
+          </button>
+          <button
+            onClick={onCancel}
+            className="bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-400"
+          >
+            Cancel
+          </button>
+        </div>
+      </td>
+    </>
+  )
 }
