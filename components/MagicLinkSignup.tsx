@@ -251,7 +251,7 @@ export default function MagicLinkSignup({ profileId, token, profileName, profile
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
         <h1 className="text-3xl font-bold text-center mb-2">
-          {process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth"}
+          {process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "YOUR EVENT NAME"}
         </h1>
         <p className="text-center text-gray-600 mb-2">Welcome, {profileName}!</p>
         <p className="text-center text-sm text-gray-500 mb-8">

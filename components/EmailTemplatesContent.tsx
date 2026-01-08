@@ -483,7 +483,7 @@ function TemplateForm({
     payment_date: '15th January 2026',
     deadline_date: '1st February 2026',
     days_away: '7',
-    event_name: "Owen's Stag 2026 - Bournemouth",
+    event_name: "YOUR EVENT NAME",
     bank_account_number: '12345678',
     bank_sort_code: '12-34-56',
   }

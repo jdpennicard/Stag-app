@@ -28,7 +28,7 @@ export async function getEventName(
           })
         } else {
           // Fallback to env var if no Supabase credentials
-          return process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth"
+          return process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "YOUR EVENT NAME"
         }
       }
     }
@@ -40,10 +40,10 @@ export async function getEventName(
       .limit(1)
       .single()
 
-    return stagDates?.event_name || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth"
+    return stagDates?.event_name || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "YOUR EVENT NAME"
   } catch (error) {
     console.warn('Error fetching event name from database, using env var:', error)
-    return process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth"
+    return process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "YOUR EVENT NAME"
   }
 }
 
