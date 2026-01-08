@@ -355,17 +355,48 @@ export default function AdminContent() {
             </button>
           </div>
 
-          {showAddDeadline && (
+          {showAddDeadline || editingDeadline ? (
             <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-              <h3 className="font-semibold mb-3">Add New Deadline</h3>
-              <DeadlineForm
+              <h3 className="font-semibold mb-3">
+                {deadlines.length > 0 ? 'Edit Payment Deadline' : 'Set Payment Deadline'}
+              </h3>
+              <SimpleDeadlineForm
+                deadline={deadlines.length > 0 ? deadlines[0] : null}
                 onSuccess={() => {
                   setShowAddDeadline(false)
+                  setEditingDeadline(null)
                   fetchData()
                 }}
-                onCancel={() => setShowAddDeadline(false)}
-                existingDeadlines={deadlines}
+                onCancel={() => {
+                  setShowAddDeadline(false)
+                  setEditingDeadline(null)
+                }}
               />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {deadlines.length > 0 ? (
+                <>
+                  <div>
+                    <span className="text-sm text-gray-600">Label: </span>
+                    <span className="font-semibold">{deadlines[0].label}</span>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-600">Due Date: </span>
+                    <span className="font-semibold">{formatDate(deadlines[0].due_date)}</span>
+                  </div>
+                  {deadlines.length > 1 && (
+                    <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                      <p className="text-sm text-yellow-800">
+                        <strong>Note:</strong> Multiple deadlines found. Only the first one is used on the dashboard. 
+                        Consider deleting the others to avoid confusion.
+                      </p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-gray-600 py-4">No payment deadline set. Set one to enable reminder emails.</p>
+              )}
             </div>
           )}
 
