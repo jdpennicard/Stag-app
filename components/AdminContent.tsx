@@ -20,6 +20,8 @@ export default function AdminContent() {
   const [profiles, setProfiles] = useState<ProfileWithPayments[]>([])
   const [pendingPayments, setPendingPayments] = useState<any[]>([])
   const [deadlines, setDeadlines] = useState<Deadline[]>([])
+  const [stagDates, setStagDates] = useState<{ start_date: string; end_date?: string | null } | null>(null)
+  const [editingStagDates, setEditingStagDates] = useState(false)
   const [loading, setLoading] = useState(true)
   const [showAddGuest, setShowAddGuest] = useState(false)
   const [showAddDeadline, setShowAddDeadline] = useState(false)
@@ -34,10 +36,11 @@ export default function AdminContent() {
 
   const fetchData = async () => {
     try {
-      const [profilesRes, paymentsRes, deadlinesRes] = await Promise.all([
+      const [profilesRes, paymentsRes, deadlinesRes, stagDatesRes] = await Promise.all([
         fetch('/api/admin/profiles'),
         fetch('/api/admin/pending-payments'),
         fetch('/api/admin/deadlines'),
+        fetch('/api/admin/stag-dates'),
       ])
 
       if (!profilesRes.ok) {
@@ -52,6 +55,12 @@ export default function AdminContent() {
         if (deadlinesRes.ok) {
           const deadlinesData = await deadlinesRes.json()
           setDeadlines(deadlinesData || [])
+        }
+        
+        // Fetch stag dates
+        if (stagDatesRes.ok) {
+          const stagDatesData = await stagDatesRes.json()
+          setStagDates(stagDatesData)
         }
         // Calculate percent paid for each profile
         const profilesWithPercent = profilesData.map((profile: any) => {
@@ -291,6 +300,47 @@ export default function AdminContent() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* Stag Dates Management */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Stag/Hen Dates</h2>
+            <button
+              onClick={() => setEditingStagDates(!editingStagDates)}
+              className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700"
+            >
+              {editingStagDates ? 'Cancel' : 'Edit Dates'}
+            </button>
+          </div>
+
+          {editingStagDates ? (
+            <StagDatesForm
+              initialDates={stagDates || { start_date: '2026-03-06', end_date: '2026-03-08' }}
+              onSuccess={() => {
+                setEditingStagDates(false)
+                fetchData()
+              }}
+              onCancel={() => setEditingStagDates(false)}
+            />
+          ) : (
+            <div className="space-y-2">
+              <div>
+                <span className="text-sm text-gray-600">Start Date: </span>
+                <span className="font-semibold">
+                  {stagDates?.start_date 
+                    ? formatDate(stagDates.start_date) 
+                    : 'Not set'}
+                </span>
+              </div>
+              {stagDates?.end_date && (
+                <div>
+                  <span className="text-sm text-gray-600">End Date: </span>
+                  <span className="font-semibold">{formatDate(stagDates.end_date)}</span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Payment Deadlines Management */}
@@ -1206,6 +1256,94 @@ function ProfileActionsDropdown({
   )
 }
 
+
+// Stag Dates Form Component
+function StagDatesForm({ 
+  initialDates, 
+  onSuccess, 
+  onCancel 
+}: { 
+  initialDates: { start_date: string; end_date?: string | null }
+  onSuccess: () => void
+  onCancel: () => void 
+}) {
+  const [startDate, setStartDate] = useState(initialDates.start_date)
+  const [endDate, setEndDate] = useState(initialDates.end_date || '')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!startDate) {
+      alert('Start date is required')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/admin/stag-dates', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          start_date: startDate,
+          end_date: endDate || null,
+        }),
+      })
+
+      if (res.ok) {
+        onSuccess()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Failed to update stag dates')
+      }
+    } catch (err) {
+      alert('Failed to update stag dates')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium mb-1">Start Date (Required)</label>
+        <input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          className="w-full px-3 py-2 border rounded-md"
+          required
+        />
+        <p className="text-xs text-gray-500 mt-1">This is the date the countdown is based on</p>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1">End Date (Optional)</label>
+        <input
+          type="date"
+          value={endDate}
+          onChange={(e) => setEndDate(e.target.value)}
+          className="w-full px-3 py-2 border rounded-md"
+        />
+        <p className="text-xs text-gray-500 mt-1">Leave empty if it's a single-day event</p>
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 disabled:opacity-50"
+        >
+          {submitting ? 'Saving...' : 'Save Dates'}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400"
+        >
+          Cancel
+        </button>
+      </div>
+    </form>
+  )
+}
 
 // Deadline Form Component
 function DeadlineForm({ onSuccess, onCancel }: { onSuccess: () => void, onCancel: () => void }) {

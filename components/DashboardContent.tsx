@@ -15,6 +15,7 @@ interface DashboardContentProps {
   profile: Profile
   payments: Payment[]
   deadlines: Deadline[]
+  stagDates?: { start_date: string; end_date?: string | null }
   confirmedTotal: number
   pendingTotal: number
   remaining: number
@@ -27,6 +28,7 @@ export default function DashboardContent({
   profile,
   payments,
   deadlines,
+  stagDates,
   confirmedTotal,
   pendingTotal,
   remaining,
@@ -100,13 +102,20 @@ export default function DashboardContent({
     : process.env.NEXT_PUBLIC_PAYMENT_DEADLINE 
     ? new Date(process.env.NEXT_PUBLIC_PAYMENT_DEADLINE)
     : new Date('2026-02-01')
-  const stagDate = process.env.NEXT_PUBLIC_STAG_DATE
+  
+  // Use stag dates from database, fallback to env var, then default
+  const stagStartDate = stagDates?.start_date
+    ? new Date(stagDates.start_date)
+    : process.env.NEXT_PUBLIC_STAG_DATE
     ? new Date(process.env.NEXT_PUBLIC_STAG_DATE)
     : new Date('2026-03-06')
+  const stagEndDate = stagDates?.end_date
+    ? new Date(stagDates.end_date)
+    : null
   
   const today = new Date()
   const daysUntilPaymentDeadline = Math.ceil((paymentDeadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-  const daysUntilStag = Math.ceil((stagDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  const daysUntilStag = Math.ceil((stagStartDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
@@ -340,13 +349,22 @@ export default function DashboardContent({
                 <div className="space-y-3">
                   <div>
                     <h3 className="text-lg font-semibold mb-2">Stag Countdown</h3>
-                    <p className="text-sm text-purple-100 mb-1">Event Date</p>
+                    <p className="text-sm text-purple-100 mb-1">
+                      {stagEndDate ? 'Event Dates' : 'Event Date'}
+                    </p>
                     <p className="text-lg font-bold">
-                      {stagDate.toLocaleDateString('en-GB', {
+                      {stagStartDate.toLocaleDateString('en-GB', {
                         day: 'numeric',
                         month: 'long',
                         year: 'numeric',
                       })}
+                      {stagEndDate && stagEndDate.getTime() !== stagStartDate.getTime() && (
+                        <> - {stagEndDate.toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })}</>
+                      )}
                     </p>
                   </div>
                   <div className="border-t border-purple-400 pt-3">

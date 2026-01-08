@@ -43,6 +43,15 @@ export default async function DashboardPage() {
     .order('due_date', { ascending: true })
   const deadlinesArray: any[] = (deadlines || []) as any[]
   
+  // Fetch stag dates
+  const { data: stagDates } = await supabase
+    .from('stag_dates')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+  const stagDatesData: any = stagDates || { start_date: '2026-03-06', end_date: '2026-03-08' }
+  
   // If admin, also fetch all profiles for payment approval (including unlinked ones)
   let allProfiles: any[] = []
   if (profileData.is_admin) {
@@ -65,6 +74,7 @@ export default async function DashboardPage() {
       profile={profileData}
       payments={payments}
       deadlines={deadlinesArray}
+      stagDates={stagDatesData}
       confirmedTotal={confirmedTotal}
       pendingTotal={pendingTotal}
       remaining={remaining}
