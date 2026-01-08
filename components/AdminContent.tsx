@@ -1388,11 +1388,15 @@ function SimpleDeadlineForm({
           onSuccess()
         } else {
           const data = await res.json()
-          alert(data.error || 'Failed to create deadline')
+          const errorMsg = data.details 
+            ? `${data.error}\n\nDetails: ${data.details}`
+            : data.error || 'Failed to save deadline'
+          alert(errorMsg)
         }
       }
-    } catch (err) {
-      alert('Failed to save deadline')
+    } catch (err: any) {
+      console.error('Error saving deadline:', err)
+      alert(`Failed to save deadline: ${err.message || 'Unknown error'}`)
     } finally {
       setSubmitting(false)
     }
