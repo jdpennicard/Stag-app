@@ -1310,8 +1310,24 @@ function SimpleDeadlineForm({
   onSuccess: () => void
   onCancel: () => void
 }) {
+  // Format date for HTML date input (YYYY-MM-DD)
+  const formatDateForInput = (dateString: string | undefined): string => {
+    if (!dateString) return ''
+    // If it's already in YYYY-MM-DD format, return as-is
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+      return dateString
+    }
+    // Otherwise, parse and format
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return ''
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   const [label, setLabel] = useState(deadline?.label || '')
-  const [dueDate, setDueDate] = useState(deadline?.due_date || '')
+  const [dueDate, setDueDate] = useState(formatDateForInput(deadline?.due_date))
   const [submitting, setSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
