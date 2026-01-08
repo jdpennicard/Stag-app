@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser, getCurrentProfile } from '@/lib/auth'
+import { createServerClient } from '@/lib/supabase/server'
 import ClaimProfileForm from '@/components/ClaimProfileForm'
 
 export default async function ClaimProfilePage() {
