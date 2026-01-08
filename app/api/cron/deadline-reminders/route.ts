@@ -232,13 +232,15 @@ export async function GET(request: NextRequest) {
           }
 
           // Calculate remaining balance
+          // Need to check payments by both user_id AND profile_id (for unlinked profiles)
           let confirmedFromPayments = 0
           try {
+            // Fetch payments linked by user_id OR profile_id
             const { data: payments, error: paymentsError } = await supabase
               .from('payments')
-              .select('amount, status')
-              .eq('user_id', profile.user_id)
+              .select('amount, status, user_id, profile_id')
               .eq('status', 'confirmed')
+              .or(`user_id.eq.${profile.user_id},profile_id.eq.${profile.id}`)
 
             if (paymentsError) {
               console.error(`Error fetching payments for profile ${profile.id}:`, paymentsError)
@@ -297,10 +299,11 @@ export async function GET(request: NextRequest) {
           }
 
           // Send the email (pass supabase client for cron job context)
-          console.log(`Sending reminder email to ${profile.email} (${profile.full_name}) for deadline ${deadline.label}`)
+          // Use the specific template name instead of event_type to avoid conflicts with multiple templates
+          console.log(`Sending reminder email to ${profile.email} (${profile.full_name}) for deadline ${deadline.label} using template: ${template.name}`)
           
           const emailResult = await sendTemplateEmail(
-            'deadline_reminder',
+            template.name, // Use template name instead of event_type to ensure we get the correct template
             profile.email,
             profile.full_name,
             context,

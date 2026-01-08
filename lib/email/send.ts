@@ -31,7 +31,24 @@ export async function getEmailTemplate(
 ): Promise<EmailTemplate | null> {
   const supabase = supabaseClient || createServerClient()
   
-  // Try to find by name first, then by event_type
+  // Try to find by ID first (UUID format), then by name, then by event_type
+  // Check if it looks like a UUID
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(templateNameOrEventType)
+  
+  if (isUUID) {
+    const { data: templateById, error: errorById } = await supabase
+      .from('email_templates')
+      .select('*')
+      .eq('id', templateNameOrEventType)
+      .eq('enabled', true)
+      .single()
+
+    if (!errorById && templateById) {
+      return templateById as EmailTemplate
+    }
+  }
+  
+  // Try to find by name
   const { data: templateByName, error: errorByName } = await supabase
     .from('email_templates')
     .select('*')
@@ -43,15 +60,16 @@ export async function getEmailTemplate(
     return templateByName as EmailTemplate
   }
 
-  const { data: templateByEvent, error: errorByEvent } = await supabase
+  // Try to find by event_type (but this can return multiple, so we'll take the first one)
+  const { data: templatesByEvent, error: errorByEvent } = await supabase
     .from('email_templates')
     .select('*')
     .eq('event_type', templateNameOrEventType)
     .eq('enabled', true)
-    .single()
+    .limit(1) // Use limit instead of single to avoid errors with multiple templates
 
-  if (!errorByEvent && templateByEvent) {
-    return templateByEvent as EmailTemplate
+  if (!errorByEvent && templatesByEvent && templatesByEvent.length > 0) {
+    return templatesByEvent[0] as EmailTemplate
   }
 
   return null
