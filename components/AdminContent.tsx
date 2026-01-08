@@ -14,12 +14,17 @@ interface ProfileWithPayments extends Profile {
   percent_paid: number
 }
 
+type Deadline = Database['public']['Tables']['payment_deadlines']['Row']
+
 export default function AdminContent() {
   const [profiles, setProfiles] = useState<ProfileWithPayments[]>([])
   const [pendingPayments, setPendingPayments] = useState<any[]>([])
+  const [deadlines, setDeadlines] = useState<Deadline[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddGuest, setShowAddGuest] = useState(false)
+  const [showAddDeadline, setShowAddDeadline] = useState(false)
   const [editingProfile, setEditingProfile] = useState<string | null>(null)
+  const [editingDeadline, setEditingDeadline] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
@@ -29,9 +34,10 @@ export default function AdminContent() {
 
   const fetchData = async () => {
     try {
-      const [profilesRes, paymentsRes] = await Promise.all([
+      const [profilesRes, paymentsRes, deadlinesRes] = await Promise.all([
         fetch('/api/admin/profiles'),
         fetch('/api/admin/pending-payments'),
+        fetch('/api/admin/deadlines'),
       ])
 
       if (!profilesRes.ok) {
@@ -41,6 +47,12 @@ export default function AdminContent() {
         setError(errorMsg)
       } else {
         const profilesData = await profilesRes.json()
+        
+        // Fetch deadlines
+        if (deadlinesRes.ok) {
+          const deadlinesData = await deadlinesRes.json()
+          setDeadlines(deadlinesData || [])
+        }
         // Calculate percent paid for each profile
         const profilesWithPercent = profilesData.map((profile: any) => {
           const totalDue = Number(profile.total_due) || 0
@@ -278,6 +290,118 @@ export default function AdminContent() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* Payment Deadlines Management */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Payment Deadlines</h2>
+            <button
+              onClick={() => setShowAddDeadline(!showAddDeadline)}
+              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
+            >
+              {showAddDeadline ? 'Cancel' : 'Add Deadline'}
+            </button>
+          </div>
+
+          {showAddDeadline && (
+            <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+              <h3 className="font-semibold mb-3">Add New Deadline</h3>
+              <DeadlineForm
+                onSuccess={() => {
+                  setShowAddDeadline(false)
+                  fetchData()
+                }}
+                onCancel={() => setShowAddDeadline(false)}
+              />
+            </div>
+          )}
+
+          <div className="overflow-x-auto">
+            {deadlines.length === 0 ? (
+              <p className="text-gray-600 py-4">No deadlines configured. Add one to start sending reminder emails.</p>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-4">Label</th>
+                    <th className="text-left py-2 px-4">Due Date</th>
+                    <th className="text-left py-2 px-4">Suggested Amount</th>
+                    <th className="text-left py-2 px-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deadlines.map((deadline) => (
+                    <tr key={deadline.id} className="border-b">
+                      {editingDeadline === deadline.id ? (
+                        <DeadlineEditRow
+                          deadline={deadline}
+                          onSave={async (updates) => {
+                            try {
+                              const res = await fetch(`/api/admin/deadlines/${deadline.id}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(updates),
+                              })
+                              if (res.ok) {
+                                setEditingDeadline(null)
+                                fetchData()
+                              } else {
+                                const data = await res.json()
+                                setError(data.error || 'Failed to update deadline')
+                              }
+                            } catch (err) {
+                              setError('Failed to update deadline')
+                            }
+                          }}
+                          onCancel={() => setEditingDeadline(null)}
+                        />
+                      ) : (
+                        <>
+                          <td className="py-2 px-4">{deadline.label}</td>
+                          <td className="py-2 px-4">{formatDate(deadline.due_date)}</td>
+                          <td className="py-2 px-4">
+                            {deadline.suggested_amount ? formatCurrency(Number(deadline.suggested_amount)) : '-'}
+                          </td>
+                          <td className="py-2 px-4">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setEditingDeadline(deadline.id)}
+                                className="text-blue-600 hover:text-blue-800 text-sm"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (!confirm(`Delete deadline "${deadline.label}"?`)) return
+                                  try {
+                                    const res = await fetch(`/api/admin/deadlines/${deadline.id}`, {
+                                      method: 'DELETE',
+                                    })
+                                    if (res.ok) {
+                                      fetchData()
+                                    } else {
+                                      const data = await res.json()
+                                      setError(data.error || 'Failed to delete deadline')
+                                    }
+                                  } catch (err) {
+                                    setError('Failed to delete deadline')
+                                  }
+                                }}
+                                className="text-red-600 hover:text-red-800 text-sm"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
 
@@ -1082,3 +1206,153 @@ function ProfileActionsDropdown({
   )
 }
 
+
+// Deadline Form Component
+function DeadlineForm({ onSuccess, onCancel }: { onSuccess: () => void, onCancel: () => void }) {
+  const [label, setLabel] = useState('')
+  const [dueDate, setDueDate] = useState('')
+  const [suggestedAmount, setSuggestedAmount] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!label || !dueDate) {
+      alert('Label and due date are required')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/admin/deadlines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          label,
+          due_date: dueDate,
+          suggested_amount: suggestedAmount || null,
+        }),
+      })
+
+      if (res.ok) {
+        onSuccess()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Failed to create deadline')
+      }
+    } catch (err) {
+      alert('Failed to create deadline')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className=" space-y-4\>
+ <div>
+ <label className=\block text-sm font-medium mb-1\>Label</label>
+ <input
+ type=\text\
+ value={label}
+ onChange={(e) => setLabel(e.target.value)}
+ placeholder=\e.g. Final Payment\
+ className=\w-full px-3 py-2 border rounded-md\
+ required
+ />
+ </div>
+ <div>
+ <label className=\block text-sm font-medium mb-1\>Due Date</label>
+ <input
+ type=\date\
+ value={dueDate}
+ onChange={(e) => setDueDate(e.target.value)}
+ className=\w-full px-3 py-2 border rounded-md\
+ required
+ />
+ </div>
+ <div>
+ <label className=\block text-sm font-medium mb-1\>Suggested Amount (optional)</label>
+ <input
+ type=\number\
+ step=\0.01\
+ value={suggestedAmount}
+ onChange={(e) => setSuggestedAmount(e.target.value)}
+ placeholder=\e.g. 500.00\
+ className=\w-full px-3 py-2 border rounded-md\
+ />
+ </div>
+ <div className=\flex gap-2\>
+ <button
+ type=\submit\
+ disabled={submitting}
+ className=\bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50\
+ >
+ {submitting ? 'Creating...' : 'Create Deadline'}
+ </button>
+ <button
+ type=\button\
+ onClick={onCancel}
+ className=\bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400\
+ >
+ Cancel
+ </button>
+ </div>
+ </form>
+ )
+}
+
+// Deadline Edit Row Component
+function DeadlineEditRow({ deadline, onSave, onCancel }: { deadline: Deadline, onSave: (updates: any) => void, onCancel: () => void }) {
+ const [label, setLabel] = useState(deadline.label)
+ const [dueDate, setDueDate] = useState(deadline.due_date)
+ const [suggestedAmount, setSuggestedAmount] = useState(deadline.suggested_amount?.toString() || '')
+
+ const handleSave = () => {
+ onSave({
+ label,
+ due_date: dueDate,
+ suggested_amount: suggestedAmount || null,
+ })
+ }
+
+ return (
+ <>
+ <td colSpan={4} className=\py-2 px-4\>
+ <div className=\flex gap-2 items-center\>
+ <input
+ type=\text\
+ value={label}
+ onChange={(e) => setLabel(e.target.value)}
+ className=\flex-1 px-2 py-1 border rounded\
+ placeholder=\Label\
+ />
+ <input
+ type=\date\
+ value={dueDate}
+ onChange={(e) => setDueDate(e.target.value)}
+ className=\px-2 py-1 border rounded\
+ />
+ <input
+ type=\number\
+ step=\0.01\
+ value={suggestedAmount}
+ onChange={(e) => setSuggestedAmount(e.target.value)}
+ className=\w-32 px-2 py-1 border rounded\
+ placeholder=\Amount\
+ />
+ <button
+ onClick={handleSave}
+ className=\bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700\
+ >
+ Save
+ </button>
+ <button
+ onClick={onCancel}
+ className=\bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-400\
+ >
+ Cancel
+ </button>
+ </div>
+ </td>
+ </>
+ )
+}

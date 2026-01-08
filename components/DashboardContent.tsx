@@ -93,7 +93,11 @@ export default function DashboardContent({
   }
 
   // Calculate countdowns
-  const paymentDeadlineDate = process.env.NEXT_PUBLIC_PAYMENT_DEADLINE 
+  // Use the first deadline from database, fallback to env var, then default
+  const firstDeadline = deadlines && deadlines.length > 0 ? deadlines[0] : null
+  const paymentDeadlineDate = firstDeadline?.due_date
+    ? new Date(firstDeadline.due_date)
+    : process.env.NEXT_PUBLIC_PAYMENT_DEADLINE 
     ? new Date(process.env.NEXT_PUBLIC_PAYMENT_DEADLINE)
     : new Date('2026-02-01')
   const stagDate = process.env.NEXT_PUBLIC_STAG_DATE
