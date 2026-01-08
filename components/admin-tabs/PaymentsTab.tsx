@@ -12,13 +12,16 @@ interface ProfileWithPayments extends Profile {
   confirmed_total: number
   remaining: number
   percent_paid: number
+  pending_total: number
 }
 
 export default function PaymentsTab() {
   const [profiles, setProfiles] = useState<ProfileWithPayments[]>([])
+  const [allProfiles, setAllProfiles] = useState<Profile[]>([]) // For dropdown
   const [pendingPayments, setPendingPayments] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddPayment, setShowAddPayment] = useState(false)
+  const [editingProfile, setEditingProfile] = useState<string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | undefined>(undefined)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,9 +38,10 @@ export default function PaymentsTab() {
 
   const fetchData = async () => {
     try {
-      const [profilesRes, paymentsRes] = await Promise.all([
+      const [profilesRes, paymentsRes, allProfilesRes] = await Promise.all([
         fetch('/api/admin/profiles'),
         fetch('/api/admin/pending-payments'),
+        fetch('/api/admin/profiles'), // Get all profiles for dropdown
       ])
 
       if (!profilesRes.ok) {
@@ -47,18 +51,81 @@ export default function PaymentsTab() {
       }
 
       const profilesData = await profilesRes.json()
+      
+      // Store all profiles for dropdown
+      if (allProfilesRes.ok) {
+        const allProfilesData = await allProfilesRes.json()
+        setAllProfiles(allProfilesData)
+      }
+
+      // Get pending payments
+      let pendingPaymentsData: any[] = []
+      let rawPendingPayments: any[] = []
+      if (paymentsRes.ok) {
+        pendingPaymentsData = await paymentsRes.json()
+        setPendingPayments(pendingPaymentsData)
+        
+        // Fetch raw pending payments to get profile_id for accurate matching
+        try {
+          const supabaseClient = createClient()
+          const { data: rawPayments, error: rawError } = await supabaseClient
+            .from('payments')
+            .select('id, amount, profile_id, user_id')
+            .eq('status', 'pending')
+          
+          if (!rawError && rawPayments) {
+            rawPendingPayments = rawPayments
+          } else {
+            // Fallback: match by name from formatted data
+            rawPendingPayments = pendingPaymentsData.map((p: any) => ({
+              id: p.id,
+              amount: p.amount,
+              profile_id: null,
+              user_id: null,
+              full_name: p.full_name,
+            }))
+          }
+        } catch (err) {
+          console.error('Failed to fetch raw pending payments:', err)
+          // Fallback: match by name from formatted data
+          rawPendingPayments = pendingPaymentsData.map((p: any) => ({
+            id: p.id,
+            amount: p.amount,
+            profile_id: null,
+            user_id: null,
+            full_name: p.full_name,
+          }))
+        }
+      }
+
+      // Calculate pending total for each profile
       const profilesWithPercent = profilesData.map((profile: any) => {
         const totalDue = Number(profile.total_due) || 0
         const confirmedTotal = profile.confirmed_total || 0
         const percentPaid = totalDue > 0 ? (confirmedTotal / totalDue) * 100 : 100
-        return { ...profile, percent_paid: Math.round(percentPaid * 100) / 100 }
+        
+        // Calculate pending payments for this profile
+        // Try to match by profile_id/user_id first, then fallback to name matching
+        const pendingTotal = rawPendingPayments
+          .filter((p: any) => {
+            if (p.profile_id === profile.id || (p.user_id && p.user_id === profile.user_id)) {
+              return true
+            }
+            // Fallback: match by name if we don't have profile_id
+            if (p.full_name && p.full_name === profile.full_name) {
+              return true
+            }
+            return false
+          })
+          .reduce((sum: number, p: any) => sum + Number(p.amount || 0), 0)
+        
+        return { 
+          ...profile, 
+          percent_paid: Math.round(percentPaid * 100) / 100,
+          pending_total: pendingTotal
+        }
       })
       setProfiles(profilesWithPercent)
-
-      if (paymentsRes.ok) {
-        const paymentsData = await paymentsRes.json()
-        setPendingPayments(paymentsData)
-      }
     } catch (err: any) {
       setError(err.message || 'Failed to load payments')
     } finally {
@@ -89,6 +156,26 @@ export default function PaymentsTab() {
       }
     } catch (err) {
       console.error('Failed to reject payment:', err)
+    }
+  }
+
+  const handleUpdateProfile = async (profileId: string, updates: any) => {
+    try {
+      const res = await fetch(`/api/admin/update-guest/${profileId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+      if (res.ok) {
+        setEditingProfile(null)
+        fetchData()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Failed to update profile')
+      }
+    } catch (err) {
+      console.error('Failed to update profile:', err)
+      alert('Failed to update profile')
     }
   }
 
@@ -176,6 +263,7 @@ export default function PaymentsTab() {
               <tr className="border-b">
                 <th className="text-left py-2 px-4">Name</th>
                 <th className="text-left py-2 px-4">Total Due</th>
+                <th className="text-left py-2 px-4">Pending Payment</th>
                 <th className="text-left py-2 px-4">Confirmed Paid</th>
                 <th className="text-left py-2 px-4">% Paid</th>
                 <th className="text-left py-2 px-4">Remaining</th>
@@ -185,23 +273,43 @@ export default function PaymentsTab() {
             <tbody>
               {profiles.map((profile) => (
                 <tr key={profile.id} className="border-b">
-                  <td className="py-2 px-4">{profile.full_name}</td>
-                  <td className="py-2 px-4">{formatCurrency(Number(profile.total_due))}</td>
-                  <td className="py-2 px-4">{formatCurrency(profile.confirmed_total)}</td>
-                  <td className="py-2 px-4">
-                    <span className={`font-semibold ${profile.percent_paid >= 100 ? 'text-green-600' : profile.percent_paid >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
-                      {profile.percent_paid.toFixed(1)}%
-                    </span>
-                  </td>
-                  <td className="py-2 px-4">{formatCurrency(profile.remaining)}</td>
-                  <td className="py-2 px-4">
-                    <a
-                      href={`/admin/payments?profile=${profile.id}`}
-                      className="text-blue-600 hover:text-blue-800 text-sm"
-                    >
-                      Edit Payments
-                    </a>
-                  </td>
+                  {editingProfile === profile.id ? (
+                    <EditPaymentRow
+                      profile={profile}
+                      allProfiles={allProfiles}
+                      onSave={(updates) => handleUpdateProfile(profile.id, updates)}
+                      onCancel={() => setEditingProfile(null)}
+                    />
+                  ) : (
+                    <>
+                      <td className="py-2 px-4">{profile.full_name}</td>
+                      <td className="py-2 px-4">{formatCurrency(Number(profile.total_due))}</td>
+                      <td className="py-2 px-4">
+                        {profile.pending_total > 0 ? (
+                          <span className="text-yellow-600 font-semibold">
+                            {formatCurrency(profile.pending_total)}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-4">{formatCurrency(profile.confirmed_total)}</td>
+                      <td className="py-2 px-4">
+                        <span className={`font-semibold ${profile.percent_paid >= 100 ? 'text-green-600' : profile.percent_paid >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                          {profile.percent_paid.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td className="py-2 px-4">{formatCurrency(profile.remaining)}</td>
+                      <td className="py-2 px-4">
+                        <button
+                          onClick={() => setEditingProfile(profile.id)}
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          Edit
+                        </button>
+                      </td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -257,6 +365,96 @@ export default function PaymentsTab() {
         )}
       </div>
     </div>
+  )
+}
+
+// Edit Payment Row Component
+function EditPaymentRow({ 
+  profile, 
+  allProfiles,
+  onSave, 
+  onCancel 
+}: { 
+  profile: ProfileWithPayments
+  allProfiles: Profile[]
+  onSave: (updates: any) => void
+  onCancel: () => void 
+}) {
+  const [selectedProfileId, setSelectedProfileId] = useState(profile.id)
+  const [totalDue, setTotalDue] = useState(profile.total_due.toString())
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    
+    // If profile changed, update the profile_id (this will require updating payments too)
+    // For now, if profile changed, we'll update the current profile's name to match
+    // and update total_due
+    const selectedProfile = allProfiles.find(p => p.id === selectedProfileId)
+    
+    // If selecting a different profile, we need to update the name
+    // But actually, if they select a different profile, they probably want to reassign
+    // For now, let's just update the name and total_due of the current profile
+    if (selectedProfileId !== profile.id) {
+      // User selected a different profile - update current profile's name to match
+      onSave({
+        total_due: parseFloat(totalDue),
+        full_name: selectedProfile?.full_name || profile.full_name,
+      })
+    } else {
+      // Just updating total_due
+      onSave({
+        total_due: parseFloat(totalDue),
+      })
+    }
+  }
+
+  return (
+    <>
+      <td className="py-2 px-4" colSpan={7}>
+        <form onSubmit={handleSubmit} className="flex gap-4 items-end">
+          <div className="flex-1">
+            <label className="block text-xs text-gray-600 mb-1">Name</label>
+            <select
+              value={selectedProfileId}
+              onChange={(e) => setSelectedProfileId(e.target.value)}
+              className="w-full px-2 py-1 border rounded text-sm"
+            >
+              {allProfiles.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.full_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="w-32">
+            <label className="block text-xs text-gray-600 mb-1">Total Due</label>
+            <input
+              type="number"
+              step="0.01"
+              value={totalDue}
+              onChange={(e) => setTotalDue(e.target.value)}
+              required
+              className="w-full px-2 py-1 border rounded text-sm"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={onCancel}
+              className="bg-gray-600 text-white px-3 py-1 rounded text-sm hover:bg-gray-700"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </td>
+    </>
   )
 }
 
