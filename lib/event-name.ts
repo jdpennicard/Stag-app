@@ -33,7 +33,7 @@ export async function getEventName(
       }
     }
 
-    const { data: stagDates } = await supabase
+    const { data: stagDates } = await (supabase as any)
       .from('stag_dates')
       .select('event_name')
       .order('created_at', { ascending: false })
