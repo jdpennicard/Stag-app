@@ -364,6 +364,7 @@ export default function AdminContent() {
                   fetchData()
                 }}
                 onCancel={() => setShowAddDeadline(false)}
+                existingDeadlines={deadlines}
               />
             </div>
           )}
@@ -1346,15 +1347,31 @@ function StagDatesForm({
 }
 
 // Deadline Form Component
-function DeadlineForm({ onSuccess, onCancel }: { onSuccess: () => void, onCancel: () => void }) {
+function DeadlineForm({ onSuccess, onCancel, existingDeadlines }: { 
+  onSuccess: () => void
+  onCancel: () => void
+  existingDeadlines?: Deadline[]
+}) {
   const [label, setLabel] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [suggestedAmount, setSuggestedAmount] = useState('')
+  const [useExistingDeadline, setUseExistingDeadline] = useState(false)
+  const [selectedDeadlineId, setSelectedDeadlineId] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!label || !dueDate) {
+    
+    // If using existing deadline, just use its date
+    let finalDueDate = dueDate
+    if (useExistingDeadline && selectedDeadlineId) {
+      const selectedDeadline = existingDeadlines?.find(d => d.id === selectedDeadlineId)
+      if (selectedDeadline) {
+        finalDueDate = selectedDeadline.due_date
+      }
+    }
+    
+    if (!label || !finalDueDate) {
       alert('Label and due date are required')
       return
     }
@@ -1366,7 +1383,7 @@ function DeadlineForm({ onSuccess, onCancel }: { onSuccess: () => void, onCancel
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           label,
-          due_date: dueDate,
+          due_date: finalDueDate,
           suggested_amount: suggestedAmount || null,
         }),
       })
@@ -1383,6 +1400,14 @@ function DeadlineForm({ onSuccess, onCancel }: { onSuccess: () => void, onCancel
       setSubmitting(false)
     }
   }
+  
+  // When selecting an existing deadline, auto-fill the date
+  const handleDeadlineSelect = (deadlineId: string) => {
+    const selectedDeadline = existingDeadlines?.find(d => d.id === deadlineId)
+    if (selectedDeadline) {
+      setDueDate(selectedDeadline.due_date)
+    }
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -1397,6 +1422,42 @@ function DeadlineForm({ onSuccess, onCancel }: { onSuccess: () => void, onCancel
           required
         />
       </div>
+      {existingDeadlines && existingDeadlines.length > 0 && (
+        <div>
+          <label className="flex items-center mb-2">
+            <input
+              type="checkbox"
+              checked={useExistingDeadline}
+              onChange={(e) => {
+                setUseExistingDeadline(e.target.checked)
+                if (!e.target.checked) {
+                  setSelectedDeadlineId('')
+                  setDueDate('')
+                }
+              }}
+              className="mr-2"
+            />
+            <span className="text-sm">Use date from existing deadline</span>
+          </label>
+          {useExistingDeadline && (
+            <select
+              value={selectedDeadlineId}
+              onChange={(e) => {
+                setSelectedDeadlineId(e.target.value)
+                handleDeadlineSelect(e.target.value)
+              }}
+              className="w-full px-3 py-2 border rounded-md mb-2"
+            >
+              <option value="">Select a deadline...</option>
+              {existingDeadlines.map((deadline) => (
+                <option key={deadline.id} value={deadline.id}>
+                  {deadline.label} - {new Date(deadline.due_date).toLocaleDateString('en-GB')}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
       <div>
         <label className="block text-sm font-medium mb-1">Due Date</label>
         <input
@@ -1405,7 +1466,11 @@ function DeadlineForm({ onSuccess, onCancel }: { onSuccess: () => void, onCancel
           onChange={(e) => setDueDate(e.target.value)}
           className="w-full px-3 py-2 border rounded-md"
           required
+          disabled={useExistingDeadline && selectedDeadlineId !== ''}
         />
+        {useExistingDeadline && selectedDeadlineId && (
+          <p className="text-xs text-gray-500 mt-1">Date will be set from selected deadline</p>
+        )}
       </div>
       <div>
         <label className="block text-sm font-medium mb-1">Suggested Amount (optional)</label>
