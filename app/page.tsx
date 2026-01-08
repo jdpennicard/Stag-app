@@ -17,26 +17,72 @@ export default async function Home() {
     if (profile) {
       redirect('/dashboard')
     } else {
-      // Check for auto-link by email
+      // Check for auto-link by email - use service role for reliable linking
       const supabase = (await import('@/lib/supabase/server')).createServerClient()
-      const { data: existingProfile } = await supabase
+      
+      // First try with regular client
+      let { data: existingProfile } = await supabase
         .from('profiles')
         .select('*')
         .eq('email', user.email as any)
         .is('user_id', null)
         .single()
       
+      // If not found, try with service role key (bypasses RLS)
+      if (!existingProfile && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        const { createClient } = await import('@supabase/supabase-js')
+        const supabaseAdmin = createClient(
+          process.env.NEXT_PUBLIC_SUPABASE_URL!,
+          process.env.SUPABASE_SERVICE_ROLE_KEY
+        )
+        const { data: adminProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('*')
+          .eq('email', user.email as any)
+          .is('user_id', null)
+          .single()
+        existingProfile = adminProfile
+      }
+      
       if (existingProfile) {
         const profileData: any = existingProfile as any
         const updateData: any = { user_id: user.id }
-        await supabase
+        
+        // Try update with regular client first
+        let updateError = null
+        const { error } = await supabase
           .from('profiles')
           .update(updateData)
           .eq('id', profileData.id as any)
-        redirect('/dashboard')
-      } else {
-        redirect('/claim-profile')
+          .is('user_id', null)
+        
+        updateError = error
+        
+        // If update failed, try with service role key
+        if (updateError && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+          const { createClient } = await import('@supabase/supabase-js')
+          const supabaseAdmin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
+          )
+          const { error: adminError } = await supabaseAdmin
+            .from('profiles')
+            .update(updateData)
+            .eq('id', profileData.id as any)
+            .is('user_id', null)
+          
+          if (!adminError) {
+            // Successfully linked, redirect
+            redirect('/dashboard')
+          }
+        } else if (!updateError) {
+          // Successfully linked, redirect
+          redirect('/dashboard')
+        }
       }
+      
+      // If we get here, no profile found or linking failed - go to claim page
+      redirect('/claim-profile')
     }
   }
 

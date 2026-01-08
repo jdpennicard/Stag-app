@@ -12,9 +12,34 @@ export async function GET() {
 
     const supabase = createServerClient()
 
+    // First, try to auto-link by email if there's a matching unclaimed profile
+    if (user.email) {
+      const { data: matchingProfile } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, user_id')
+        .eq('email', user.email as any)
+        .is('user_id', null)
+        .single()
+      
+      if (matchingProfile) {
+        // Try to link it automatically
+        const { error: linkError } = await supabase
+          .from('profiles')
+          .update({ user_id: user.id })
+          .eq('id', matchingProfile.id as any)
+          .is('user_id', null)
+        
+        // If linking succeeded, return empty array (user should be redirected)
+        if (!linkError) {
+          return NextResponse.json([])
+        }
+      }
+    }
+
+    // Fetch all unclaimed profiles (including those with emails)
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, full_name')
+      .select('id, full_name, email')
       .is('user_id', null)
       .eq('is_admin', false as any)
       .order('full_name')

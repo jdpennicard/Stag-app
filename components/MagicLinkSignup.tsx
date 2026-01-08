@@ -166,22 +166,19 @@ export default function MagicLinkSignup({ profileId, token, profileName, profile
         throw new Error('Failed to get user ID')
       }
 
-      // Link the profile to the user
-      const { error: linkError } = await supabase
-        .from('profiles')
-        .update({
-          user_id: userId,
-          email: signupEmail, // Ensure email is set (use profile email or signup email)
-          signup_token: null, // Clear the token after successful signup
-          signup_token_expires_at: null,
-        })
-        .eq('id', profileId)
-        .eq('signup_token', token) // Double-check token matches
-        .is('user_id', null) // Only update if still unclaimed
+      // Link the profile to the user using server-side API
+      // This ensures RLS policies are properly handled
+      const linkResponse = await fetch('/api/signup/link-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileId, token }),
+      })
 
-      if (linkError) {
-        console.error('Failed to link profile:', linkError)
-        throw new Error('Failed to link your profile. Please try again or contact support.')
+      const linkData = await linkResponse.json()
+
+      if (!linkResponse.ok) {
+        console.error('Failed to link profile:', linkData)
+        throw new Error(linkData.error || 'Failed to link your profile. Please try again or contact support.')
       }
 
       // If we don't have a session yet, try one more time to sign in
