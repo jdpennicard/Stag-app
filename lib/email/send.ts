@@ -169,19 +169,14 @@ async function logEmail(
     // Always use service role client for logging (bypasses RLS)
     // This ensures consistent behavior whether called from cron or regular API
     // If a client was passed, use it; otherwise create a new service role client
-    let supabaseAdmin: ReturnType<typeof createClient>
-    
-    if (supabaseClient) {
-      // Type assertion: both createServerClient and createClient return compatible types for our use case
-      supabaseAdmin = supabaseClient as ReturnType<typeof createClient>
-    } else {
-      supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
-      })
-    }
+    const supabaseAdmin = supabaseClient 
+      ? (supabaseClient as any) // Type assertion needed for union type compatibility
+      : createClient(supabaseUrl, supabaseServiceKey, {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false
+          }
+        })
 
     await supabaseAdmin.from('email_log').insert({
       template_id: data.templateId,
