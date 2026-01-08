@@ -17,9 +17,13 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('=== Deadline Reminders Cron Started ===')
+    console.log('Timestamp:', new Date().toISOString())
+    
     // Security check - verify the request is from Vercel Cron or has the correct token
     const userAgent = request.headers.get('user-agent') || ''
     const isVercelCron = userAgent.includes('vercel-cron')
+    console.log('User Agent:', userAgent, 'Is Vercel Cron:', isVercelCron)
     
     // If it's not from Vercel Cron, check for token
     if (!isVercelCron) {
@@ -32,6 +36,7 @@ export async function GET(request: NextRequest) {
       if (expectedToken) {
         const providedToken = authHeader?.replace('Bearer ', '') || token
         if (providedToken !== expectedToken) {
+          console.error('Unauthorized request - token mismatch')
           return NextResponse.json(
             { error: 'Unauthorized' },
             { status: 401 }
@@ -43,7 +48,15 @@ export async function GET(request: NextRequest) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
+    console.log('Environment check:', {
+      hasSupabaseUrl: !!supabaseUrl,
+      hasServiceRoleKey: !!supabaseKey,
+      supabaseUrlLength: supabaseUrl?.length || 0,
+      serviceRoleKeyLength: supabaseKey?.length || 0,
+    })
+
     if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase configuration')
       return NextResponse.json(
         { error: 'Supabase configuration missing' },
         { status: 500 }
@@ -85,6 +98,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get all enabled deadline_reminder templates with reminder_days configured
+    console.log('Fetching deadline reminder templates...')
     const { data: templates, error: templatesError } = await supabase
       .from('email_templates')
       .select('*')
@@ -94,8 +108,9 @@ export async function GET(request: NextRequest) {
 
     if (templatesError) {
       console.error('Error fetching reminder templates:', templatesError)
-      console.error('Supabase URL:', supabaseUrl ? 'Set' : 'Missing')
-      console.error('Service Role Key:', supabaseKey ? 'Set (length: ' + supabaseKey.length + ')' : 'Missing')
+      console.error('Error code:', templatesError.code)
+      console.error('Error message:', templatesError.message)
+      console.error('Error hint:', templatesError.hint)
       return NextResponse.json(
         { 
           error: 'Failed to fetch reminder templates', 
@@ -107,7 +122,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    console.log(`Found ${templates?.length || 0} deadline reminder template(s)`)
+
     if (!templates || templates.length === 0) {
+      console.log('No deadline reminder templates configured - returning success')
       return NextResponse.json({
         success: true,
         message: 'No deadline reminder templates configured',
@@ -317,14 +335,36 @@ export async function GET(request: NextRequest) {
       errors: errors.length > 0 ? errors : undefined,
     })
   } catch (error: any) {
-    console.error('Error in deadline-reminders cron:', error)
+    // Comprehensive error logging
+    console.error('=== Deadline Reminders Cron Error ===')
+    console.error('Error message:', error.message)
+    console.error('Error name:', error.name)
     console.error('Error stack:', error.stack)
-    console.error('Error details:', JSON.stringify(error, null, 2))
+    
+    // Log environment check
+    console.error('Environment check:', {
+      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      hasResendKey: !!process.env.RESEND_API_KEY,
+      hasEmailFrom: !!process.env.EMAIL_FROM,
+      nodeEnv: process.env.NODE_ENV,
+    })
+    
+    // Try to stringify error for more details
+    try {
+      console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
+    } catch (stringifyError) {
+      console.error('Could not stringify error:', stringifyError)
+    }
+    
     return NextResponse.json(
       {
         success: false,
         error: error.message || 'Internal server error',
-        details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+        errorName: error.name,
+        // Include more details in production for debugging
+        details: error.message || 'Unknown error occurred',
+        timestamp: new Date().toISOString(),
       },
       { status: 500 }
     )
