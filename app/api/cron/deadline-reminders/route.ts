@@ -10,6 +10,11 @@ import { EmailContext } from '@/lib/email/variables'
  * 
  * Security: Protected by secret token in query parameter or header
  */
+
+// Force dynamic rendering (required for cron jobs that use headers/cookies)
+export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest) {
   try {
     // Security check - verify the request has the correct token
