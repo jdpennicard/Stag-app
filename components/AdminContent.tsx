@@ -1349,66 +1349,69 @@ function StagDatesForm({
   )
 }
 
-// Deadline Form Component
-function DeadlineForm({ onSuccess, onCancel, existingDeadlines }: { 
+// Simple Deadline Form Component (single deadline, no suggested amount)
+function SimpleDeadlineForm({ 
+  deadline, 
+  onSuccess, 
+  onCancel 
+}: { 
+  deadline: Deadline | null
   onSuccess: () => void
   onCancel: () => void
-  existingDeadlines?: Deadline[]
 }) {
-  const [label, setLabel] = useState('')
-  const [dueDate, setDueDate] = useState('')
-  const [suggestedAmount, setSuggestedAmount] = useState('')
-  const [useExistingDeadline, setUseExistingDeadline] = useState(false)
-  const [selectedDeadlineId, setSelectedDeadlineId] = useState('')
+  const [label, setLabel] = useState(deadline?.label || '')
+  const [dueDate, setDueDate] = useState(deadline?.due_date || '')
   const [submitting, setSubmitting] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    // If using existing deadline, just use its date
-    let finalDueDate = dueDate
-    if (useExistingDeadline && selectedDeadlineId) {
-      const selectedDeadline = existingDeadlines?.find(d => d.id === selectedDeadlineId)
-      if (selectedDeadline) {
-        finalDueDate = selectedDeadline.due_date
-      }
-    }
-    
-    if (!label || !finalDueDate) {
+    if (!label || !dueDate) {
       alert('Label and due date are required')
       return
     }
 
     setSubmitting(true)
     try {
-      const res = await fetch('/api/admin/deadlines', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          label,
-          due_date: finalDueDate,
-          suggested_amount: suggestedAmount || null,
-        }),
-      })
+      if (deadline) {
+        // Update existing deadline
+        const res = await fetch(`/api/admin/deadlines/${deadline.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            label,
+            due_date: dueDate,
+          }),
+        })
 
-      if (res.ok) {
-        onSuccess()
+        if (res.ok) {
+          onSuccess()
+        } else {
+          const data = await res.json()
+          alert(data.error || 'Failed to update deadline')
+        }
       } else {
-        const data = await res.json()
-        alert(data.error || 'Failed to create deadline')
+        // Create new deadline
+        const res = await fetch('/api/admin/deadlines', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            label,
+            due_date: dueDate,
+          }),
+        })
+
+        if (res.ok) {
+          onSuccess()
+        } else {
+          const data = await res.json()
+          alert(data.error || 'Failed to create deadline')
+        }
       }
     } catch (err) {
-      alert('Failed to create deadline')
+      alert('Failed to save deadline')
     } finally {
       setSubmitting(false)
-    }
-  }
-  
-  // When selecting an existing deadline, auto-fill the date
-  const handleDeadlineSelect = (deadlineId: string) => {
-    const selectedDeadline = existingDeadlines?.find(d => d.id === deadlineId)
-    if (selectedDeadline) {
-      setDueDate(selectedDeadline.due_date)
     }
   }
 
@@ -1425,42 +1428,6 @@ function DeadlineForm({ onSuccess, onCancel, existingDeadlines }: {
           required
         />
       </div>
-      {existingDeadlines && existingDeadlines.length > 0 && (
-        <div>
-          <label className="flex items-center mb-2">
-            <input
-              type="checkbox"
-              checked={useExistingDeadline}
-              onChange={(e) => {
-                setUseExistingDeadline(e.target.checked)
-                if (!e.target.checked) {
-                  setSelectedDeadlineId('')
-                  setDueDate('')
-                }
-              }}
-              className="mr-2"
-            />
-            <span className="text-sm">Use date from existing deadline</span>
-          </label>
-          {useExistingDeadline && (
-            <select
-              value={selectedDeadlineId}
-              onChange={(e) => {
-                setSelectedDeadlineId(e.target.value)
-                handleDeadlineSelect(e.target.value)
-              }}
-              className="w-full px-3 py-2 border rounded-md mb-2"
-            >
-              <option value="">Select a deadline...</option>
-              {existingDeadlines.map((deadline) => (
-                <option key={deadline.id} value={deadline.id}>
-                  {deadline.label} - {new Date(deadline.due_date).toLocaleDateString('en-GB')}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
       <div>
         <label className="block text-sm font-medium mb-1">Due Date</label>
         <input
@@ -1469,22 +1436,8 @@ function DeadlineForm({ onSuccess, onCancel, existingDeadlines }: {
           onChange={(e) => setDueDate(e.target.value)}
           className="w-full px-3 py-2 border rounded-md"
           required
-          disabled={useExistingDeadline && selectedDeadlineId !== ''}
         />
-        {useExistingDeadline && selectedDeadlineId && (
-          <p className="text-xs text-gray-500 mt-1">Date will be set from selected deadline</p>
-        )}
-      </div>
-      <div>
-        <label className="block text-sm font-medium mb-1">Suggested Amount (optional)</label>
-        <input
-          type="number"
-          step="0.01"
-          value={suggestedAmount}
-          onChange={(e) => setSuggestedAmount(e.target.value)}
-          placeholder="e.g., 500.00"
-          className="w-full px-3 py-2 border rounded-md"
-        />
+        <p className="text-xs text-gray-500 mt-1">This is the date 100% payment is due for all guests</p>
       </div>
       <div className="flex gap-2">
         <button
@@ -1492,7 +1445,7 @@ function DeadlineForm({ onSuccess, onCancel, existingDeadlines }: {
           disabled={submitting}
           className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50"
         >
-          {submitting ? 'Creating...' : 'Create Deadline'}
+          {submitting ? 'Saving...' : deadline ? 'Update Deadline' : 'Set Deadline'}
         </button>
         <button
           type="button"
@@ -1506,59 +1459,3 @@ function DeadlineForm({ onSuccess, onCancel, existingDeadlines }: {
   )
 }
 
-// Deadline Edit Row Component
-function DeadlineEditRow({ deadline, onSave, onCancel }: { deadline: Deadline, onSave: (updates: any) => void, onCancel: () => void }) {
- const [label, setLabel] = useState(deadline.label)
- const [dueDate, setDueDate] = useState(deadline.due_date)
- const [suggestedAmount, setSuggestedAmount] = useState(deadline.suggested_amount?.toString() || '')
-
- const handleSave = () => {
- onSave({
- label,
- due_date: dueDate,
- suggested_amount: suggestedAmount || null,
- })
- }
-
-  return (
-    <>
-      <td colSpan={4} className="py-2 px-4">
-        <div className="flex gap-2 items-center">
-          <input
-            type="text"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            className="flex-1 px-2 py-1 border rounded"
-            placeholder="Label"
-          />
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            className="px-2 py-1 border rounded"
-          />
-          <input
-            type="number"
-            step="0.01"
-            value={suggestedAmount}
-            onChange={(e) => setSuggestedAmount(e.target.value)}
-            className="w-32 px-2 py-1 border rounded"
-            placeholder="Amount"
-          />
-          <button
-            onClick={handleSave}
-            className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700"
-          >
-            Save
-          </button>
-          <button
-            onClick={onCancel}
-            className="bg-gray-300 text-gray-700 px-3 py-1 rounded text-sm hover:bg-gray-400"
-          >
-            Cancel
-          </button>
-        </div>
-      </td>
-    </>
-  )
-}

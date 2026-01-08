@@ -63,28 +63,50 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { label, due_date, suggested_amount } = body
+    const { label, due_date } = body
 
     if (!label || !due_date) {
       return NextResponse.json({ error: 'Label and due_date are required' }, { status: 400 })
     }
 
     const supabase = createServerClient()
-    const { data, error } = await supabase
+    
+    // Check if a deadline already exists - if so, update it instead of creating a new one
+    const { data: existing } = await supabase
       .from('payment_deadlines')
-      .insert({
-        label,
-        due_date,
-        suggested_amount: suggested_amount ? parseFloat(suggested_amount) : null,
-      })
-      .select()
+      .select('id')
+      .limit(1)
       .single()
 
-    if (error) {
-      return NextResponse.json({ error: 'Failed to create deadline', details: error.message }, { status: 500 })
+    let result
+    if (existing) {
+      // Update existing deadline
+      const { data, error } = await supabase
+        .from('payment_deadlines')
+        .update({ label, due_date, updated_at: new Date().toISOString() })
+        .eq('id', existing.id)
+        .select()
+        .single()
+
+      if (error) {
+        return NextResponse.json({ error: 'Failed to update deadline', details: error.message }, { status: 500 })
+      }
+      result = data
+    } else {
+      // Create new deadline
+      const { data, error } = await supabase
+        .from('payment_deadlines')
+        .insert({ label, due_date })
+        .select()
+        .single()
+
+      if (error) {
+        return NextResponse.json({ error: 'Failed to create deadline', details: error.message }, { status: 500 })
+      }
+      result = data
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json(result)
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
   }

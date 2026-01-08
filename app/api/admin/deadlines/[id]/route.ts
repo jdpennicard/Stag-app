@@ -28,14 +28,12 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { label, due_date, suggested_amount } = body
+    const { label, due_date } = body
 
     const updateData: any = {}
     if (label !== undefined) updateData.label = label
     if (due_date !== undefined) updateData.due_date = due_date
-    if (suggested_amount !== undefined) {
-      updateData.suggested_amount = suggested_amount ? parseFloat(suggested_amount) : null
-    }
+    updateData.updated_at = new Date().toISOString()
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
