@@ -88,7 +88,13 @@ export async function PATCH(request: NextRequest) {
         .single()
 
       if (error) {
-        return NextResponse.json({ error: 'Failed to update stag dates', details: error.message }, { status: 500 })
+        console.error('Error updating stag dates:', error)
+        return NextResponse.json({ 
+          error: 'Failed to update stag dates', 
+          details: error.message,
+          code: error.code,
+          hint: error.code === '42P01' ? 'The stag_dates table does not exist. Please run the migration: migrations/add-stag-dates.sql' : undefined
+        }, { status: 500 })
       }
       result = data
     } else {
@@ -103,7 +109,13 @@ export async function PATCH(request: NextRequest) {
         .single()
 
       if (error) {
-        return NextResponse.json({ error: 'Failed to create stag dates', details: error.message }, { status: 500 })
+        console.error('Error creating stag dates:', error)
+        return NextResponse.json({ 
+          error: 'Failed to create stag dates', 
+          details: error.message,
+          code: error.code,
+          hint: error.code === '42P01' ? 'The stag_dates table does not exist. Please run the migration: migrations/add-stag-dates.sql' : undefined
+        }, { status: 500 })
       }
       result = data
     }

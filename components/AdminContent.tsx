@@ -1294,7 +1294,10 @@ function StagDatesForm({
         onSuccess()
       } else {
         const data = await res.json()
-        alert(data.error || 'Failed to update stag dates')
+        const errorMsg = data.hint 
+          ? `${data.error}\n\n${data.hint}\n\nDetails: ${data.details || 'Unknown error'}`
+          : `${data.error}\n\nDetails: ${data.details || 'Unknown error'}`
+        alert(errorMsg)
       }
     } catch (err) {
       alert('Failed to update stag dates')
