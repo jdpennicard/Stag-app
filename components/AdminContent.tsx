@@ -343,15 +343,21 @@ export default function AdminContent() {
           )}
         </div>
 
-        {/* Payment Deadlines Management */}
+        {/* Payment Deadline Management */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Payment Deadlines</h2>
+            <h2 className="text-xl font-semibold">Payment Deadline</h2>
             <button
-              onClick={() => setShowAddDeadline(!showAddDeadline)}
+              onClick={() => {
+                if (deadlines.length > 0) {
+                  setEditingDeadline(deadlines[0].id)
+                } else {
+                  setShowAddDeadline(true)
+                }
+              }}
               className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700"
             >
-              {showAddDeadline ? 'Cancel' : 'Add Deadline'}
+              {deadlines.length > 0 ? 'Edit Deadline' : 'Set Deadline'}
             </button>
           </div>
 
