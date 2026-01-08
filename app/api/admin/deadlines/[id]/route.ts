@@ -30,14 +30,19 @@ export async function PATCH(
     const body = await request.json()
     const { label, due_date } = body
 
+    console.log('PATCH /api/admin/deadlines/[id] - Request body:', { label, due_date, id: params.id })
+
     const updateData: any = {}
     if (label !== undefined) updateData.label = label
     if (due_date !== undefined) updateData.due_date = due_date
-    updateData.updated_at = new Date().toISOString()
+    // Note: updated_at column may not exist in the table, so we'll only add it if the column exists
+    // For now, let's not include it to avoid errors
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json({ error: 'No fields to update' }, { status: 400 })
     }
+
+    console.log('PATCH /api/admin/deadlines/[id] - Update data:', updateData)
 
     const supabase = createServerClient()
     const { data, error } = await supabase
@@ -48,8 +53,16 @@ export async function PATCH(
       .single()
 
     if (error) {
-      return NextResponse.json({ error: 'Failed to update deadline', details: error.message }, { status: 500 })
+      console.error('PATCH /api/admin/deadlines/[id] - Supabase error:', error)
+      return NextResponse.json({ 
+        error: 'Failed to update deadline', 
+        details: error.message,
+        code: error.code,
+        hint: error.code === '42501' ? 'RLS policy violation - check if migration fix-payment-deadlines-rls.sql was run' : undefined
+      }, { status: 500 })
     }
+
+    console.log('PATCH /api/admin/deadlines/[id] - Success:', data)
 
     return NextResponse.json(data)
   } catch (error: any) {

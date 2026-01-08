@@ -1388,9 +1388,17 @@ function SimpleDeadlineForm({
           onSuccess()
         } else {
           const data = await res.json()
-          const errorMsg = data.details 
-            ? `${data.error}\n\nDetails: ${data.details}`
-            : data.error || 'Failed to save deadline'
+          console.error('Error updating deadline:', data)
+          let errorMsg = data.error || 'Failed to save deadline'
+          if (data.details) {
+            errorMsg += `\n\nDetails: ${data.details}`
+          }
+          if (data.hint) {
+            errorMsg += `\n\nHint: ${data.hint}`
+          }
+          if (data.code) {
+            errorMsg += `\n\nError Code: ${data.code}`
+          }
           alert(errorMsg)
         }
       }
