@@ -57,6 +57,12 @@ export default function Navigation({ isAdmin }: { isAdmin?: boolean }) {
           >
             Email Templates
           </a>
+          <a 
+            href="/admin/reminder-schedules" 
+            className={`text-sm ${pathname === '/admin/reminder-schedules' ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}
+          >
+            Reminder Schedules
+          </a>
         </div>
       )}
       
