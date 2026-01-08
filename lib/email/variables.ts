@@ -138,7 +138,7 @@ export function getVariableValue(variableName: string, context: EmailContext): s
     
     // Event/App variables
     case 'event_name':
-      return context.event_name || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth"
+      return context.event_name || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "YOUR EVENT NAME"
     case 'bank_account_name':
       return context.bank_account_name || process.env.NEXT_PUBLIC_STAG_BANK_ACCOUNT_NAME || ''
     case 'bank_account_number':

@@ -319,7 +319,7 @@ export default function AdminContent() {
 
           {editingEventName ? (
             <EventNameForm
-              initialName={eventName || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth"}
+              initialName={eventName || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "YOUR EVENT NAME"}
               onSuccess={() => {
                 setEditingEventName(false)
                 fetchData()
@@ -331,7 +331,7 @@ export default function AdminContent() {
               <div>
                 <span className="text-sm text-gray-600">Event Name: </span>
                 <span className="font-semibold">
-                  {eventName || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth"}
+                  {eventName || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "YOUR EVENT NAME"}
                 </span>
               </div>
             </div>

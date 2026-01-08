@@ -4,8 +4,8 @@
 ALTER TABLE stag_dates 
 ADD COLUMN IF NOT EXISTS event_name TEXT;
 
--- Set default value from existing data if any
+-- Set default value if any existing records
 UPDATE stag_dates 
-SET event_name = 'Owen''s Stag 2026 - Bournemouth'
+SET event_name = 'YOUR EVENT NAME'
 WHERE event_name IS NULL;
 

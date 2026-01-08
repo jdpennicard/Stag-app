@@ -290,7 +290,7 @@ export async function GET(request: NextRequest) {
               suggested_amount: deadline.suggested_amount ? Number(deadline.suggested_amount) : undefined,
               days_away: daysAway,
             },
-            event_name: (await supabase.from('stag_dates').select('event_name').order('created_at', { ascending: false }).limit(1).single()).data?.event_name || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth",
+            event_name: (await supabase.from('stag_dates').select('event_name').order('created_at', { ascending: false }).limit(1).single()).data?.event_name || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "YOUR EVENT NAME",
             dashboard_url: process.env.NEXT_PUBLIC_APP_URL 
               ? `${process.env.NEXT_PUBLIC_APP_URL}/dashboard`
               : undefined,

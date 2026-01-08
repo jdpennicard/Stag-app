@@ -16,7 +16,7 @@ export async function GET() {
       .limit(1)
       .single()
 
-    const eventName = stagDates?.event_name || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth"
+    const eventName = stagDates?.event_name || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "YOUR EVENT NAME"
     
     return NextResponse.json({ event_name: eventName })
   } catch (error: any) {

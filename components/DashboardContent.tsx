@@ -128,7 +128,7 @@ export default function DashboardContent({
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold mb-2">
-                {stagDates?.event_name || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "Owen's Stag 2026 - Bournemouth"}
+                {stagDates?.event_name || process.env.NEXT_PUBLIC_STAG_EVENT_NAME || "YOUR EVENT NAME"}
               </h1>
               <p className="text-gray-600">Welcome, {profile.full_name}</p>
             </div>
