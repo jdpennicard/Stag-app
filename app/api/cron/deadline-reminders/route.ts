@@ -151,12 +151,15 @@ export async function GET(request: NextRequest) {
         // Calculate target date (deadline date - days_before)
         const targetDate = new Date(today)
         targetDate.setDate(targetDate.getDate() + daysBefore)
+        const targetDateStr = targetDate.toISOString().split('T')[0]
+        
+        console.log(`Processing ${daysBefore} days reminder - looking for deadlines on ${targetDateStr}`)
 
         // Find deadlines that match this target date
         const { data: deadlines, error: deadlinesError } = await supabase
           .from('payment_deadlines')
           .select('*')
-          .eq('due_date', targetDate.toISOString().split('T')[0]) // Compare date only
+          .eq('due_date', targetDateStr) // Compare date only
 
         if (deadlinesError) {
           console.error(`Error fetching deadlines for ${daysBefore} days:`, deadlinesError)
@@ -164,13 +167,18 @@ export async function GET(request: NextRequest) {
           continue
         }
 
+        console.log(`Found ${deadlines?.length || 0} deadline(s) matching ${targetDateStr}`)
+
         if (!deadlines || deadlines.length === 0) {
           // No deadlines match this date - that's fine, just continue
+          console.log(`No deadlines found for ${daysBefore} days reminder (target date: ${targetDateStr})`)
           continue
         }
 
         // For each deadline, find profiles with remaining balance
         for (const deadline of deadlines) {
+          console.log(`Processing deadline: ${deadline.label} (ID: ${deadline.id}, Due: ${deadline.due_date})`)
+          
           const { data: profiles, error: profilesError } = await supabase
             .from('profiles')
             .select('*')
@@ -184,7 +192,10 @@ export async function GET(request: NextRequest) {
             continue
           }
 
+          console.log(`Found ${profiles?.length || 0} eligible profile(s) for deadline ${deadline.label}`)
+
           if (!profiles || profiles.length === 0) {
+            console.log(`No eligible profiles found for deadline ${deadline.label} (must have email and be claimed)`)
             continue
           }
 
@@ -248,7 +259,10 @@ export async function GET(request: NextRequest) {
           const remaining = totalDue - confirmedTotal
 
           // Only send if there's a remaining balance
+          console.log(`Profile ${profile.full_name}: total_due=${totalDue}, confirmed=${confirmedTotal}, remaining=${remaining}`)
+          
           if (remaining <= 0) {
+            console.log(`Skipping ${profile.full_name} - no remaining balance (remaining: ${remaining})`)
             continue
           }
 
@@ -283,6 +297,8 @@ export async function GET(request: NextRequest) {
           }
 
           // Send the email (pass supabase client for cron job context)
+          console.log(`Sending reminder email to ${profile.email} (${profile.full_name}) for deadline ${deadline.label}`)
+          
           const emailResult = await sendTemplateEmail(
             'deadline_reminder',
             profile.email,
@@ -293,6 +309,8 @@ export async function GET(request: NextRequest) {
               supabaseClient: supabase // Pass the service role client
             }
           )
+
+          console.log(`Email result for ${profile.email}:`, emailResult.success ? 'SUCCESS' : `FAILED - ${emailResult.error}`)
 
             if (emailResult.success) {
               // Log the reminder (don't fail if logging fails)
