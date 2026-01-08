@@ -14,20 +14,26 @@ export const runtime = 'nodejs'
 
 export async function GET(request: NextRequest) {
   try {
-    // Security check - verify the request has the correct token
-    const authHeader = request.headers.get('authorization')
-    const token = request.nextUrl.searchParams.get('token')
-    const expectedToken = process.env.KEEP_ALIVE_SECRET || process.env.CRON_SECRET
+    // Security check - verify the request is from Vercel Cron or has the correct token
+    const userAgent = request.headers.get('user-agent') || ''
+    const isVercelCron = userAgent.includes('vercel-cron')
+    
+    // If it's not from Vercel Cron, check for token
+    if (!isVercelCron) {
+      const authHeader = request.headers.get('authorization')
+      const token = request.nextUrl.searchParams.get('token')
+      const expectedToken = process.env.KEEP_ALIVE_SECRET || process.env.CRON_SECRET
 
-    // If no token is configured, allow the request (for development)
-    // In production, you should always set KEEP_ALIVE_SECRET
-    if (expectedToken) {
-      const providedToken = authHeader?.replace('Bearer ', '') || token
-      if (providedToken !== expectedToken) {
-        return NextResponse.json(
-          { error: 'Unauthorized' },
-          { status: 401 }
-        )
+      // If no token is configured, allow the request (for development)
+      // In production, you should always set KEEP_ALIVE_SECRET
+      if (expectedToken) {
+        const providedToken = authHeader?.replace('Bearer ', '') || token
+        if (providedToken !== expectedToken) {
+          return NextResponse.json(
+            { error: 'Unauthorized' },
+            { status: 401 }
+          )
+        }
       }
     }
 
