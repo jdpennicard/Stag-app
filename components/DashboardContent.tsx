@@ -22,6 +22,7 @@ interface DashboardContentProps {
   isAdmin?: boolean
   allProfiles?: Array<{ id: string; user_id: string | null; full_name: string; email: string | null }>
   currentUserId?: string
+  viewAsName?: string
 }
 
 export default function DashboardContent({
@@ -35,10 +36,24 @@ export default function DashboardContent({
   isAdmin = false,
   allProfiles = [],
   currentUserId,
+  viewAsName,
 }: DashboardContentProps) {
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [showAdminPaymentForm, setShowAdminPaymentForm] = useState(false)
   const router = useRouter()
+
+  const handleStopViewingAs = async () => {
+    try {
+      await fetch('/api/admin/view-as', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileId: null }),
+      })
+      router.refresh()
+    } catch (err) {
+      console.error('Failed to stop viewing as:', err)
+    }
+  }
 
   const handleConfirmPayment = async (paymentId: string) => {
     try {
@@ -123,6 +138,17 @@ export default function DashboardContent({
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
+        {viewAsName && (
+          <div className="bg-amber-100 border border-amber-400 text-amber-900 rounded-lg p-4 mb-4 flex items-center justify-between">
+            <span className="font-medium">Viewing as: {viewAsName}</span>
+            <button
+              onClick={handleStopViewingAs}
+              className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded text-sm font-medium"
+            >
+              Stop viewing as
+            </button>
+          </div>
+        )}
         {/* Header */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center">

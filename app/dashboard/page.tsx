@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser, getCurrentProfile } from '@/lib/auth'
+import { getCurrentUser, getCurrentProfile, getViewAsProfileId } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
 import DashboardContent from '@/components/DashboardContent'
 
@@ -16,12 +16,22 @@ export default async function DashboardPage() {
 
   // Cast profile to any to avoid TypeScript errors
   const profileData: any = profile as any
+  const viewAsId = await getViewAsProfileId()
+  const isViewingAs = !!viewAsId
 
   const supabase = createServerClient()
 
-  // Fetch payments - if admin, fetch all pending payments; otherwise just their own
+  // When "view as" is active, show only that user's data. Otherwise: admin sees all, user sees own.
+  const effectiveUserId = profileData.user_id
   let payments: any[] = []
-  if (profileData.is_admin) {
+  if (isViewingAs) {
+    const { data: userPayments } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('user_id', effectiveUserId)
+      .order('created_at', { ascending: false })
+    payments = (userPayments || []) as any[]
+  } else if (profileData.is_admin) {
     const { data: allPayments } = await supabase
       .from('payments')
       .select('*')
@@ -52,9 +62,9 @@ export default async function DashboardPage() {
     .single()
   const stagDatesData: any = stagDates || { start_date: '2026-03-06', end_date: '2026-03-08', event_name: null }
   
-  // If admin, also fetch all profiles for payment approval (including unlinked ones)
+  // If admin (and not viewing as), fetch all profiles for payment approval
   let allProfiles: any[] = []
-  if (profileData.is_admin) {
+  if (profileData.is_admin && !isViewingAs) {
     const { data: profiles } = await supabase
       .from('profiles')
       .select('id, user_id, full_name, email')
@@ -78,9 +88,10 @@ export default async function DashboardPage() {
       confirmedTotal={confirmedTotal}
       pendingTotal={pendingTotal}
       remaining={remaining}
-      isAdmin={profileData.is_admin}
+      isAdmin={isViewingAs ? false : profileData.is_admin}
       allProfiles={allProfiles}
-      currentUserId={user.id}
+      currentUserId={effectiveUserId}
+      viewAsName={isViewingAs ? profileData.full_name : undefined}
     />
   )
 }

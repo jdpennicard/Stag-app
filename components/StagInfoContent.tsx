@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Database } from '@/lib/supabase/database.types'
 import Navigation from './Navigation'
 import AdminPostManager from './AdminPostManager'
@@ -15,11 +16,26 @@ interface StagInfoContentProps {
   isAdmin: boolean
   currentUserId: string
   profileName?: string
+  viewAsName?: string
 }
 
-export default function StagInfoContent({ posts: initialPosts, isAdmin, currentUserId, profileName }: StagInfoContentProps) {
+export default function StagInfoContent({ posts: initialPosts, isAdmin, currentUserId, profileName, viewAsName }: StagInfoContentProps) {
+  const router = useRouter()
   const [posts, setPosts] = useState(initialPosts)
   const [showAdminManager, setShowAdminManager] = useState(false)
+
+  const handleStopViewingAs = async () => {
+    try {
+      await fetch('/api/admin/view-as', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profileId: null }),
+      })
+      router.refresh()
+    } catch (err) {
+      console.error('Failed to stop viewing as:', err)
+    }
+  }
 
   // Separate posts into categories
   const pinnedPosts = posts.filter((p) => p.is_pinned)
@@ -36,6 +52,17 @@ export default function StagInfoContent({ posts: initialPosts, isAdmin, currentU
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
+        {viewAsName && (
+          <div className="bg-amber-100 border border-amber-400 text-amber-900 rounded-lg p-4 mb-4 flex items-center justify-between">
+            <span className="font-medium">Viewing as: {viewAsName}</span>
+            <button
+              onClick={handleStopViewingAs}
+              className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded text-sm font-medium"
+            >
+              Stop viewing as
+            </button>
+          </div>
+        )}
         {/* Top Bar */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center">

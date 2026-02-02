@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { getCurrentUser, getCurrentProfile } from '@/lib/auth'
+import { getCurrentUser, getCurrentProfile, getViewAsProfileId } from '@/lib/auth'
 import { createServerClient } from '@/lib/supabase/server'
 import StagInfoContent from '@/components/StagInfoContent'
 
@@ -14,8 +14,9 @@ export default async function StagInfoPage() {
     redirect('/claim-profile')
   }
 
-  // Cast profile to any to avoid TypeScript errors
   const profileData: any = profile as any
+  const viewAsId = await getViewAsProfileId()
+  const viewAsName = viewAsId ? profileData.full_name : undefined
 
   const supabase = createServerClient()
 
@@ -35,9 +36,10 @@ export default async function StagInfoPage() {
   return (
     <StagInfoContent
       posts={postsArray}
-      isAdmin={profileData.is_admin}
-      currentUserId={user.id}
+      isAdmin={viewAsId ? false : profileData.is_admin}
+      currentUserId={profileData.user_id || user.id}
       profileName={profileData.full_name}
+      viewAsName={viewAsName}
     />
   )
 }

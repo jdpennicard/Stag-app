@@ -1,4 +1,12 @@
+import { cookies } from 'next/headers'
 import { createServerClient } from './supabase/server'
+
+export const VIEW_AS_COOKIE = 'view_as_profile_id'
+
+export async function getViewAsProfileId(): Promise<string | null> {
+  const cookieStore = await cookies()
+  return cookieStore.get(VIEW_AS_COOKIE)?.value ?? null
+}
 
 export async function getCurrentUser() {
   const supabase = createServerClient()
@@ -13,6 +21,23 @@ export async function getCurrentProfile() {
   if (!user) return null
 
   const supabase = createServerClient()
+  const viewAsId = await getViewAsProfileId()
+
+  // Admins can "view as" another user: use that profile for data/UI
+  if (viewAsId) {
+    const adminEmails = process.env.ADMIN_EMAILS?.split(',').map((e) => e.trim()) || []
+    if (adminEmails.includes(user.email || '')) {
+      const { data: viewAsProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', viewAsId)
+        .single()
+      if (viewAsProfile && (viewAsProfile as any).user_id) {
+        return viewAsProfile
+      }
+    }
+  }
+
   const { data: profile } = await supabase
     .from('profiles')
     .select('*')
