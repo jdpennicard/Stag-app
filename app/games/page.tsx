@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { getCurrentUser, getCurrentProfile } from '@/lib/auth'
+import { getWeekendStarted } from '@/lib/weekend'
 import Navigation from '@/components/Navigation'
 
 export default async function GamesPage() {
@@ -16,6 +17,7 @@ export default async function GamesPage() {
 
   const profileData: any = profile as any
   const isStagOnly = !!profileData.is_stag_only
+  const weekendMode = await getWeekendStarted()
 
   const games = [
     {
@@ -36,7 +38,7 @@ export default async function GamesPage() {
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold">Games</h1>
-            <Navigation isAdmin={false} isStagOnly={isStagOnly} />
+            <Navigation isAdmin={false} isStagOnly={isStagOnly} weekendMode={weekendMode} />
           </div>
         </div>
 

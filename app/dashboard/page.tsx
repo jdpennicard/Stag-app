@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser, getCurrentProfile, getViewAsProfileId } from '@/lib/auth'
+import { getWeekendStarted } from '@/lib/weekend'
 import { createServerClient } from '@/lib/supabase/server'
 import DashboardContent from '@/components/DashboardContent'
 
@@ -18,6 +19,12 @@ export default async function DashboardPage() {
   if (profileData.is_stag_only) {
     redirect('/games')
   }
+
+  const weekendMode = await getWeekendStarted()
+  if (weekendMode) {
+    redirect('/games')
+  }
+
   const viewAsId = await getViewAsProfileId()
   const isViewingAs = !!viewAsId
 
@@ -95,6 +102,7 @@ export default async function DashboardPage() {
       currentUserId={effectiveUserId}
       viewAsName={isViewingAs ? profileData.full_name : undefined}
       isStagOnly={profileData.is_stag_only}
+      weekendMode={false}
     />
   )
 }

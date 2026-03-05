@@ -24,6 +24,7 @@ interface DashboardContentProps {
   currentUserId?: string
   viewAsName?: string
   isStagOnly?: boolean
+  weekendMode?: boolean
 }
 
 export default function DashboardContent({
@@ -39,6 +40,7 @@ export default function DashboardContent({
   currentUserId,
   viewAsName,
   isStagOnly = false,
+  weekendMode = false,
 }: DashboardContentProps) {
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [showAdminPaymentForm, setShowAdminPaymentForm] = useState(false)
@@ -160,7 +162,7 @@ export default function DashboardContent({
               </h1>
               <p className="text-gray-600">Welcome, {profile.full_name}</p>
             </div>
-            <Navigation isAdmin={isAdmin} isStagOnly={isStagOnly} />
+            <Navigation isAdmin={isAdmin} isStagOnly={isStagOnly} weekendMode={weekendMode} />
           </div>
         </div>
 

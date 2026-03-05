@@ -26,6 +26,7 @@ export async function GET() {
         id: null,
         start_date: '2026-03-06',
         end_date: '2026-03-08',
+        weekend_started: false,
       })
     }
 
@@ -58,31 +59,31 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { start_date, end_date } = body
-
-    if (!start_date) {
-      return NextResponse.json({ error: 'start_date is required' }, { status: 400 })
-    }
+    const { start_date, end_date, weekend_started } = body
 
     const supabase = createServerClient()
-    
-    // Check if a record exists
     const { data: existing } = await supabase
       .from('stag_dates')
       .select('id')
       .limit(1)
       .single()
 
+    const updatePayload: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    }
+    if (start_date != null) updatePayload.start_date = start_date
+    if (end_date !== undefined) updatePayload.end_date = end_date || null
+    if (weekend_started !== undefined) updatePayload.weekend_started = !!weekend_started
+
+    if (!existing && start_date == null) {
+      return NextResponse.json({ error: 'start_date is required when creating' }, { status: 400 })
+    }
+
     let result
     if (existing) {
-      // Update existing record
       const { data, error } = await supabase
         .from('stag_dates')
-        .update({
-          start_date,
-          end_date: end_date || null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq('id', existing.id)
         .select()
         .single()
@@ -98,12 +99,12 @@ export async function PATCH(request: NextRequest) {
       }
       result = data
     } else {
-      // Create new record
       const { data, error } = await supabase
         .from('stag_dates')
         .insert({
-          start_date,
+          start_date: start_date || '2026-03-06',
           end_date: end_date || null,
+          weekend_started: weekend_started ?? false,
         })
         .select()
         .single()

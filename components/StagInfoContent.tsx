@@ -17,9 +17,10 @@ interface StagInfoContentProps {
   currentUserId: string
   profileName?: string
   viewAsName?: string
+  weekendMode?: boolean
 }
 
-export default function StagInfoContent({ posts: initialPosts, isAdmin, currentUserId, profileName, viewAsName }: StagInfoContentProps) {
+export default function StagInfoContent({ posts: initialPosts, isAdmin, currentUserId, profileName, viewAsName, weekendMode = false }: StagInfoContentProps) {
   const router = useRouter()
   const [posts, setPosts] = useState(initialPosts)
   const [showAdminManager, setShowAdminManager] = useState(false)
@@ -72,7 +73,7 @@ export default function StagInfoContent({ posts: initialPosts, isAdmin, currentU
               </h1>
               <p className="text-gray-600">Welcome {profileName || 'Guest'}</p>
             </div>
-            <Navigation isAdmin={isAdmin} isStagOnly={false} />
+            <Navigation isAdmin={isAdmin} isStagOnly={false} weekendMode={weekendMode} />
           </div>
         </div>
 

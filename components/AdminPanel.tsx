@@ -16,11 +16,9 @@ const TABS = [
   { id: 'email-templates', label: 'Email Templates', path: '/admin/email-templates' },
 ]
 
-export default function AdminPanel() {
+export default function AdminPanel({ weekendMode = false }: { weekendMode?: boolean }) {
   const pathname = usePathname()
   const router = useRouter()
-
-  // Determine current tab from pathname
   const currentTab = TABS.find(tab => pathname === tab.path) || TABS[0]
 
   const handleTabChange = (tabPath: string) => {
@@ -30,11 +28,10 @@ export default function AdminPanel() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold">Admin Panel</h1>
-            <Navigation isAdmin={true} isStagOnly={false} />
+            <Navigation isAdmin={true} isStagOnly={false} weekendMode={weekendMode} />
           </div>
         </div>
 

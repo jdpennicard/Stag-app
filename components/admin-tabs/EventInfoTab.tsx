@@ -1,13 +1,21 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
 import { Database } from '@/lib/supabase/database.types'
 
 type Deadline = Database['public']['Tables']['payment_deadlines']['Row']
 
 export default function EventInfoTab() {
+  const router = useRouter()
+  const supabase = createClient()
   const [deadlines, setDeadlines] = useState<Deadline[]>([])
-  const [stagDates, setStagDates] = useState<{ start_date: string; end_date?: string | null; event_name?: string | null } | null>(null)
+  const [stagDates, setStagDates] = useState<{ start_date: string; end_date?: string | null; event_name?: string | null; weekend_started?: boolean } | null>(null)
+  const [weekendPasswordModal, setWeekendPasswordModal] = useState<'begin' | 'end' | null>(null)
+  const [weekendPassword, setWeekendPassword] = useState('')
+  const [weekendPasswordError, setWeekendPasswordError] = useState<string | null>(null)
+  const [weekendUpdating, setWeekendUpdating] = useState(false)
   const [eventName, setEventName] = useState<string | null>(null)
   const [editingEventName, setEditingEventName] = useState(false)
   const [editingStagDates, setEditingStagDates] = useState(false)
@@ -50,6 +58,48 @@ export default function EventInfoTab() {
       year: 'numeric',
     })
   }
+
+  const handleWeekendConfirm = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setWeekendPasswordError(null)
+    setWeekendUpdating(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user?.email) {
+        setWeekendPasswordError('Not signed in')
+        return
+      }
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: weekendPassword,
+      })
+      if (signInError) {
+        setWeekendPasswordError('Incorrect password')
+        return
+      }
+      const newValue = weekendPasswordModal === 'begin'
+      const res = await fetch('/api/admin/stag-dates', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weekend_started: newValue }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setWeekendPasswordError(data.error || 'Failed to update')
+        return
+      }
+      setWeekendPasswordModal(null)
+      setWeekendPassword('')
+      fetchData()
+      router.refresh()
+    } catch (err: any) {
+      setWeekendPasswordError(err.message || 'Something went wrong')
+    } finally {
+      setWeekendUpdating(false)
+    }
+  }
+
+  const weekendStarted = !!stagDates?.weekend_started
 
   if (loading) {
     return <div className="text-center py-8">Loading...</div>
@@ -130,6 +180,73 @@ export default function EventInfoTab() {
           </div>
         )}
       </div>
+
+      {/* Weekend mode */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Weekend mode</h2>
+        <p className="text-sm text-gray-600 mb-3">
+          When on, the app only shows Games and Admin — Payment Home and Stag Info are hidden for everyone. Re-enter your password to turn on or off.
+        </p>
+        <div className="flex items-center gap-4">
+          <span className={`font-medium ${weekendStarted ? 'text-green-600' : 'text-gray-600'}`}>
+            {weekendStarted ? 'On' : 'Off'}
+          </span>
+          <button
+            type="button"
+            onClick={() => setWeekendPasswordModal(weekendStarted ? 'end' : 'begin')}
+            className={weekendStarted
+              ? 'bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-md text-sm'
+              : 'bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm'
+            }
+          >
+            {weekendStarted ? 'End weekend' : 'Begin weekend'}
+          </button>
+        </div>
+      </div>
+
+      {/* Password confirm modal */}
+      {weekendPasswordModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
+            <h3 className="text-lg font-semibold mb-2">
+              {weekendPasswordModal === 'begin' ? 'Begin weekend' : 'End weekend'}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Enter your password to confirm.
+            </p>
+            <form onSubmit={handleWeekendConfirm}>
+              <input
+                type="password"
+                value={weekendPassword}
+                onChange={(e) => { setWeekendPassword(e.target.value); setWeekendPasswordError(null) }}
+                placeholder="Password"
+                className="w-full px-3 py-2 border rounded-md mb-2"
+                autoFocus
+                disabled={weekendUpdating}
+              />
+              {weekendPasswordError && (
+                <p className="text-sm text-red-600 mb-2">{weekendPasswordError}</p>
+              )}
+              <div className="flex gap-2">
+                <button
+                  type="submit"
+                  disabled={weekendUpdating || !weekendPassword}
+                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded-md text-sm"
+                >
+                  {weekendUpdating ? 'Updating…' : 'Confirm'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setWeekendPasswordModal(null); setWeekendPassword(''); setWeekendPasswordError(null) }}
+                  className="bg-gray-200 hover:bg-gray-300 px-4 py-2 rounded-md text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Payment Deadline */}
       <div>
