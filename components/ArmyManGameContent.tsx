@@ -4,72 +4,33 @@ import { useState, useEffect } from 'react'
 
 type Score = { profileId: string; fullName: string; marks: number }
 
-const RULES = `🪖 THE ARMY MAN GAME
+const RULES = `🪖 THE ARMY MAN GAME — Runs all weekend. Pick an Army Man from the bucket; your soldier's pose is the one you must freeze in whenever the game is triggered.
 
-This game runs all weekend.
+👑 THE LOOKOUT — One person wears the Lookout Crown. Only they can trigger the game. Role rotates throughout the weekend.
 
-At the start of the weekend, everyone must pick an Army Man from the bucket.
+🚨 TRIGGER — Lookout shouts "GEORGIA'S COMING!" → everyone freezes in their Army Man pose.
 
-Your Army Man determines the pose you must freeze in.
+⚠️ MARKS — One mark if you: are last to freeze, move before release, or do the wrong pose.
 
-You must copy your soldier's pose whenever the game is triggered.
+🍺 FORFEIT — At 3 marks you do a drink forfeit, then your marks reset.
 
-👑 THE LOOKOUT
+🟢 RELEASE — Lookout says "ALL CLEAR!" before anyone can move.
 
-One person is the Lookout and wears the Lookout Crown.
+⚠️ COMMON SENSE — Don't trigger when someone is carrying drinks, on stairs, at the bar, or driving.
 
-Only the Lookout can trigger the game.
+🎖 Stay alert. Freeze fast. Protect the Groom.`
 
-The Lookout role rotates throughout the weekend.
-
-🚨 THE TRIGGER
-
-If the Lookout shouts:
-
-"GEORGIA'S COMING!"
-
-Everyone must immediately freeze in their Army Man pose.
-
-🍺 THE RULES
-
-Last person to freeze drinks
-
-If someone moves before release, they drink
-
-If someone does the wrong pose, they drink
-
-🟢 RELEASE
-
-The Lookout must say:
-
-"ALL CLEAR!"
-
-Only then can everyone move again.
-
-⚠️ COMMON SENSE
-
-The Lookout cannot trigger the game when someone is:
-
-Carrying drinks
-
-Walking down stairs
-
-Ordering at the bar
-
-Driving
-
-🎖 REMEMBER
-
-You are now Army Men.
-
-Stay alert.
-Freeze fast.
-And protect the Groom.`
+function pickRandom<T>(arr: T[]): T | null {
+  if (arr.length === 0) return null
+  return arr[Math.floor(Math.random() * arr.length)]
+}
 
 export default function ArmyManGameContent() {
   const [scores, setScores] = useState<Score[]>([])
   const [loading, setLoading] = useState(true)
   const [addingId, setAddingId] = useState<string | null>(null)
+  const [resetting, setResetting] = useState(false)
+  const [lookout, setLookout] = useState<string | null>(null)
 
   const fetchScores = async () => {
     try {
@@ -107,6 +68,26 @@ export default function ArmyManGameContent() {
     }
   }
 
+  const handleReset = async () => {
+    if (!confirm('Reset all marks to zero? This cannot be undone.')) return
+    setResetting(true)
+    try {
+      const res = await fetch('/api/army-man/marks', { method: 'DELETE' })
+      if (res.ok) {
+        await fetchScores()
+      }
+    } catch (err) {
+      console.error('Failed to reset marks:', err)
+    } finally {
+      setResetting(false)
+    }
+  }
+
+  const handlePickLookout = () => {
+    const chosen = pickRandom(scores)
+    if (chosen) setLookout(chosen.fullName)
+  }
+
   return (
     <>
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -116,8 +97,37 @@ export default function ArmyManGameContent() {
         </pre>
       </div>
 
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-lg font-semibold mb-2">👑 The Lookout</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Randomly pick who wears the Lookout Crown and can trigger the game.
+        </p>
+        <button
+          type="button"
+          onClick={handlePickLookout}
+          disabled={loading || scores.length === 0}
+          className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-4 py-2 rounded-lg"
+        >
+          Pick new Lookout
+        </button>
+        {lookout && (
+          <p className="mt-4 text-lg font-semibold text-amber-700">
+            {lookout} is the new Lookout! 👑
+          </p>
+        )}
+      </div>
+
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-semibold mb-4">Marks (drinks)</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold">Marks</h2>
+          <button
+            onClick={handleReset}
+            disabled={resetting || loading || scores.length === 0}
+            className="text-sm text-gray-600 hover:text-red-700 border border-gray-300 hover:border-red-400 px-3 py-1.5 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {resetting ? 'Resetting…' : 'Reset all'}
+          </button>
+        </div>
         {loading ? (
           <p className="text-gray-500">Loading…</p>
         ) : scores.length === 0 ? (

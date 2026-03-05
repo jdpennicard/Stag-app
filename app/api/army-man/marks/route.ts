@@ -82,3 +82,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to add mark' }, { status: 500 })
   }
 }
+
+export async function DELETE() {
+  try {
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const supabase = createServerClient()
+    const { data: rows } = await supabase.from('army_man_marks').select('id')
+    const ids = (rows || []).map((r) => (r as { id: string }).id)
+    if (ids.length > 0) {
+      const { error } = await supabase.from('army_man_marks').delete().in('id', ids)
+      if (error) {
+        console.error('army-man marks DELETE:', error)
+        return NextResponse.json({ error: 'Failed to reset marks' }, { status: 500 })
+      }
+    }
+
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    console.error('army-man marks DELETE:', err)
+    return NextResponse.json({ error: 'Failed to reset marks' }, { status: 500 })
+  }
+}
