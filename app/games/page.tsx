@@ -23,7 +23,11 @@ export default async function GamesPage() {
       title: '🪖 Army Man Game',
       description: 'Freeze in your soldier pose when the Lookout shouts. Track marks and pick the new Lookout.',
     },
-    // Add more games here as you build them
+    {
+      href: '/headbands',
+      title: '🎭 Headbands',
+      description: 'Get a random word, put your phone on your head, and ask questions to guess what you are. 200 items, pick a category or go random.',
+    },
   ]
 
   return (

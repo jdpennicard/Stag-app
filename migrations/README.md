@@ -31,6 +31,7 @@ This folder contains SQL migration scripts for the Stag App database.
 21. **add-army-man-marks.sql** - Creates army_man_marks table for the Army Man Game (marks per participant)
 22. **add-army-man-marks-reset-policy.sql** - Adds RLS policy so authenticated users can reset (delete all) marks
 23. **add-is-stag-only-to-profiles.sql** - Adds is_stag_only column; when true, user only sees games (no payments, Stag Info, or admin)
+24. **add-headbands-usage.sql** - Creates headbands_usage table (item_index 0-199, last_used_at) for Headbands game "back of the line" logic
 
 ## Notes
 
