@@ -23,6 +23,7 @@ interface DashboardContentProps {
   allProfiles?: Array<{ id: string; user_id: string | null; full_name: string; email: string | null }>
   currentUserId?: string
   viewAsName?: string
+  isStagOnly?: boolean
 }
 
 export default function DashboardContent({
@@ -37,6 +38,7 @@ export default function DashboardContent({
   allProfiles = [],
   currentUserId,
   viewAsName,
+  isStagOnly = false,
 }: DashboardContentProps) {
   const [showPaymentForm, setShowPaymentForm] = useState(false)
   const [showAdminPaymentForm, setShowAdminPaymentForm] = useState(false)
@@ -158,7 +160,7 @@ export default function DashboardContent({
               </h1>
               <p className="text-gray-600">Welcome, {profile.full_name}</p>
             </div>
-            <Navigation isAdmin={isAdmin} />
+            <Navigation isAdmin={isAdmin} isStagOnly={isStagOnly} />
           </div>
         </div>
 

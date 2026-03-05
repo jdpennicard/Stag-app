@@ -34,7 +34,7 @@ export default function AdminPanel() {
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center">
             <h1 className="text-3xl font-bold">Admin Panel</h1>
-            <Navigation isAdmin={true} />
+            <Navigation isAdmin={true} isStagOnly={false} />
           </div>
         </div>
 

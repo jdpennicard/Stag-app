@@ -199,6 +199,7 @@ function AddGuestForm({ onSuccess }: { onSuccess: () => void }) {
   const [totalDue, setTotalDue] = useState('')
   const [initialPaid, setInitialPaid] = useState('0')
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isStagOnly, setIsStagOnly] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -217,6 +218,7 @@ function AddGuestForm({ onSuccess }: { onSuccess: () => void }) {
           total_due: parseFloat(totalDue),
           initial_confirmed_paid: parseFloat(initialPaid) || 0,
           is_admin: isAdmin,
+          is_stag_only: isStagOnly,
         }),
       })
 
@@ -230,6 +232,7 @@ function AddGuestForm({ onSuccess }: { onSuccess: () => void }) {
       setTotalDue('')
       setInitialPaid('0')
       setIsAdmin(false)
+      setIsStagOnly(false)
       onSuccess()
     } catch (err: any) {
       setError(err.message)
@@ -292,7 +295,7 @@ function AddGuestForm({ onSuccess }: { onSuccess: () => void }) {
             className="w-full px-3 py-2 border rounded-md"
           />
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center gap-4">
           <label className="flex items-center text-sm">
             <input
               type="checkbox"
@@ -300,7 +303,16 @@ function AddGuestForm({ onSuccess }: { onSuccess: () => void }) {
               onChange={(e) => setIsAdmin(e.target.checked)}
               className="mr-2"
             />
-            Make this user an admin
+            Admin
+          </label>
+          <label className="flex items-center text-sm">
+            <input
+              type="checkbox"
+              checked={isStagOnly}
+              onChange={(e) => setIsStagOnly(e.target.checked)}
+              className="mr-2"
+            />
+            Stag only (games only, no payments or info)
           </label>
         </div>
       </div>
@@ -321,6 +333,7 @@ function EditGuestRow({ profile, onSave, onCancel }: { profile: ProfileWithPayme
   const [totalDue, setTotalDue] = useState(profile.total_due.toString())
   const [initialPaid, setInitialPaid] = useState(profile.initial_confirmed_paid.toString())
   const [isAdmin, setIsAdmin] = useState(profile.is_admin)
+  const [isStagOnly, setIsStagOnly] = useState((profile as any).is_stag_only ?? false)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -330,6 +343,7 @@ function EditGuestRow({ profile, onSave, onCancel }: { profile: ProfileWithPayme
       total_due: parseFloat(totalDue),
       initial_confirmed_paid: parseFloat(initialPaid) || 0,
       is_admin: isAdmin,
+      is_stag_only: isStagOnly,
     })
   }
 
@@ -376,7 +390,7 @@ function EditGuestRow({ profile, onSave, onCancel }: { profile: ProfileWithPayme
             className="w-full px-2 py-1 border rounded text-sm"
           />
         </div>
-        <div className="flex items-center">
+        <div className="flex items-center gap-4">
           <label className="flex items-center text-sm">
             <input
               type="checkbox"
@@ -385,6 +399,15 @@ function EditGuestRow({ profile, onSave, onCancel }: { profile: ProfileWithPayme
               className="mr-2"
             />
             Admin
+          </label>
+          <label className="flex items-center text-sm">
+            <input
+              type="checkbox"
+              checked={isStagOnly}
+              onChange={(e) => setIsStagOnly(e.target.checked)}
+              className="mr-2"
+            />
+            Stag only
           </label>
         </div>
         <div className="flex gap-2">

@@ -14,13 +14,16 @@ export default async function ArmyManPage() {
     redirect('/claim-profile')
   }
 
+  const profileData: any = profile as any
+  const isStagOnly = !!profileData.is_stag_only
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center">
             <h1 className="text-2xl font-bold">🪖 The Army Man Game</h1>
-            <Navigation />
+            <Navigation isStagOnly={isStagOnly} />
           </div>
         </div>
         <ArmyManGameContent />

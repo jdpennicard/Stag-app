@@ -4,29 +4,32 @@ import { useRouter, usePathname } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useState, useEffect } from 'react'
 
-export default function Navigation({ isAdmin }: { isAdmin?: boolean }) {
+export default function Navigation({ isAdmin, isStagOnly }: { isAdmin?: boolean; isStagOnly?: boolean }) {
   const router = useRouter()
   const pathname = usePathname()
   const supabase = createClient()
   const [adminStatus, setAdminStatus] = useState(isAdmin || false)
+  const [stagOnly, setStagOnly] = useState(isStagOnly ?? false)
 
   useEffect(() => {
-    // Check admin status
-    const checkAdmin = async () => {
+    const checkProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const { data: profile } = await supabase
           .from('profiles')
-          .select('is_admin')
+          .select('is_admin, is_stag_only')
           .eq('user_id', user.id)
           .single()
-        setAdminStatus(profile?.is_admin || false)
+        if (profile) {
+          setAdminStatus((profile as { is_admin?: boolean }).is_admin || false)
+          setStagOnly((profile as { is_stag_only?: boolean }).is_stag_only || false)
+        }
       }
     }
-    if (isAdmin === undefined) {
-      checkAdmin()
+    if (isAdmin === undefined || isStagOnly === undefined) {
+      checkProfile()
     }
-  }, [isAdmin, supabase])
+  }, [isAdmin, isStagOnly, supabase])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -34,9 +37,24 @@ export default function Navigation({ isAdmin }: { isAdmin?: boolean }) {
     router.refresh()
   }
 
+  if (stagOnly) {
+    return (
+      <div className="flex gap-4 items-center flex-wrap">
+        <a
+          href="/games"
+          className={`text-sm ${pathname === '/games' ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}
+        >
+          Games
+        </a>
+        <button onClick={handleLogout} className="text-gray-600 hover:text-gray-800 text-sm">
+          Logout
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-2">
-      {/* Admin-only link */}
       {adminStatus && (
         <a 
           href="/admin/event-info" 
@@ -45,8 +63,6 @@ export default function Navigation({ isAdmin }: { isAdmin?: boolean }) {
           Admin Panel
         </a>
       )}
-      
-      {/* All users can see Payment - Home, Army Man Game, Stag Info Central (bottom section) */}
       <div className="flex gap-4 items-center flex-wrap">
         <a 
           href="/dashboard" 
@@ -55,10 +71,10 @@ export default function Navigation({ isAdmin }: { isAdmin?: boolean }) {
           Payment - Home
         </a>
         <a 
-          href="/army-man" 
-          className={`text-sm ${pathname === '/army-man' ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}
+          href="/games" 
+          className={`text-sm ${pathname === '/games' ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}
         >
-          Army Man Game
+          Games
         </a>
         <a 
           href="/stag-info" 
@@ -66,10 +82,7 @@ export default function Navigation({ isAdmin }: { isAdmin?: boolean }) {
         >
           Stag Info Central
         </a>
-        <button
-          onClick={handleLogout}
-          className="text-gray-600 hover:text-gray-800 text-sm"
-        >
+        <button onClick={handleLogout} className="text-gray-600 hover:text-gray-800 text-sm">
           Logout
         </button>
       </div>

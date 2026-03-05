@@ -20,7 +20,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
     }
 
-    const { full_name, email, total_due, initial_confirmed_paid, is_admin } = await request.json()
+    const { full_name, email, total_due, initial_confirmed_paid, is_admin, is_stag_only } = await request.json()
 
     const supabase = createServerClient()
 
@@ -30,6 +30,7 @@ export async function PATCH(
       total_due: parseFloat(total_due),
       initial_confirmed_paid: parseFloat(initial_confirmed_paid) || 0,
       is_admin: is_admin || false,
+      is_stag_only: is_stag_only ?? false,
     }
 
     const { data, error } = await supabase

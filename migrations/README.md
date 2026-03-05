@@ -30,6 +30,7 @@ This folder contains SQL migration scripts for the Stag App database.
 20. **add-event-name.sql** - Adds event_name column to stag_dates table to allow admins to manage event name in-app
 21. **add-army-man-marks.sql** - Creates army_man_marks table for the Army Man Game (marks per participant)
 22. **add-army-man-marks-reset-policy.sql** - Adds RLS policy so authenticated users can reset (delete all) marks
+23. **add-is-stag-only-to-profiles.sql** - Adds is_stag_only column; when true, user only sees games (no payments, Stag Info, or admin)
 
 ## Notes
 

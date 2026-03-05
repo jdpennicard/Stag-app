@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const { full_name, email, total_due, initial_confirmed_paid, is_admin } = await request.json()
+    const { full_name, email, total_due, initial_confirmed_paid, is_admin, is_stag_only } = await request.json()
 
     if (!full_name || total_due === undefined) {
       return NextResponse.json({ error: 'Full name and total due are required' }, { status: 400 })
@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
       total_due: parseFloat(total_due),
       initial_confirmed_paid: parseFloat(initial_confirmed_paid) || 0,
       is_admin: is_admin || false,
+      is_stag_only: is_stag_only || false,
     }
 
     const { data, error } = await supabase

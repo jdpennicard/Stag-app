@@ -72,7 +72,7 @@ export default function StagInfoContent({ posts: initialPosts, isAdmin, currentU
               </h1>
               <p className="text-gray-600">Welcome {profileName || 'Guest'}</p>
             </div>
-            <Navigation isAdmin={isAdmin} />
+            <Navigation isAdmin={isAdmin} isStagOnly={false} />
           </div>
         </div>
 

@@ -94,6 +94,7 @@ export default async function DashboardPage() {
       allProfiles={allProfiles}
       currentUserId={effectiveUserId}
       viewAsName={isViewingAs ? profileData.full_name : undefined}
+      isStagOnly={profileData.is_stag_only}
     />
   )
 }
