@@ -90,34 +90,8 @@ export default function ArmyManGameContent() {
 
   return (
     <>
+      {/* Marks – top */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">How to play</h2>
-        <pre className="whitespace-pre-wrap text-sm text-gray-700 font-sans leading-relaxed">
-          {RULES}
-        </pre>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-2">👑 The Lookout</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Randomly pick who wears the Lookout Crown and can trigger the game.
-        </p>
-        <button
-          type="button"
-          onClick={handlePickLookout}
-          disabled={loading || scores.length === 0}
-          className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-4 py-2 rounded-lg"
-        >
-          Pick new Lookout
-        </button>
-        {lookout && (
-          <p className="mt-4 text-lg font-semibold text-amber-700">
-            {lookout} is the new Lookout! 👑
-          </p>
-        )}
-      </div>
-
-      <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-semibold">Marks</h2>
           <button
@@ -160,6 +134,37 @@ export default function ArmyManGameContent() {
           </ul>
         )}
       </div>
+
+      {/* Lookout – second */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <h2 className="text-lg font-semibold mb-2">👑 The Lookout</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Randomly pick who wears the Lookout Crown and can trigger the game.
+        </p>
+        <button
+          type="button"
+          onClick={handlePickLookout}
+          disabled={loading || scores.length === 0}
+          className="bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium px-4 py-2 rounded-lg"
+        >
+          Pick new Lookout
+        </button>
+        {lookout && (
+          <p className="mt-4 text-lg font-semibold text-amber-700">
+            {lookout} is the new Lookout! 👑
+          </p>
+        )}
+      </div>
+
+      {/* Rules – bottom, compact */}
+      <details className="bg-white rounded-lg shadow-md p-6">
+        <summary className="text-lg font-semibold cursor-pointer list-none">
+          How to play
+        </summary>
+        <pre className="whitespace-pre-wrap text-xs text-gray-600 font-sans leading-snug mt-4 pt-4 border-t border-gray-100">
+          {RULES}
+        </pre>
+      </details>
     </>
   )
 }

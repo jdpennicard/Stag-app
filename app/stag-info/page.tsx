@@ -15,6 +15,9 @@ export default async function StagInfoPage() {
   }
 
   const profileData: any = profile as any
+  if (profileData.is_stag_only) {
+    redirect('/games')
+  }
   const viewAsId = await getViewAsProfileId()
   const viewAsName = viewAsId ? profileData.full_name : undefined
 

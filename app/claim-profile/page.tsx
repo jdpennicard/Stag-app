@@ -19,25 +19,23 @@ export default async function ClaimProfilePage() {
     const supabase = createServerClient()
     const { data: matchingProfile } = await supabase
       .from('profiles')
-      .select('id, user_id')
+      .select('id, user_id, is_stag_only')
       .eq('email', user.email as any)
       .is('user_id', null)
       .single()
     
     if (matchingProfile) {
-      // Try to link it
+      const matchData: any = matchingProfile
       const { error: linkError } = await supabase
         .from('profiles')
         .update({ user_id: user.id })
         .eq('id', matchingProfile.id as any)
         .is('user_id', null)
       
-      // If linking succeeded, redirect to dashboard
       if (!linkError) {
-        redirect('/dashboard')
+        redirect(matchData.is_stag_only ? '/games' : '/dashboard')
       }
       
-      // If linking failed but we have service role key, try that
       if (linkError && process.env.SUPABASE_SERVICE_ROLE_KEY) {
         const { createClient } = await import('@supabase/supabase-js')
         const supabaseAdmin = createClient(
@@ -51,7 +49,7 @@ export default async function ClaimProfilePage() {
           .is('user_id', null)
         
         if (!adminError) {
-          redirect('/dashboard')
+          redirect(matchData.is_stag_only ? '/games' : '/dashboard')
         }
       }
     }

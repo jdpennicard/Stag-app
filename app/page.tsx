@@ -13,6 +13,12 @@ export default async function Home() {
     if (profile?.is_admin) {
       redirect('/admin')
     }
+
+    // Stag-only profiles only see games
+    const profileData: any = profile as any
+    if (profileData?.is_stag_only) {
+      redirect('/games')
+    }
     
     if (profile) {
       redirect('/dashboard')
@@ -72,12 +78,10 @@ export default async function Home() {
             .is('user_id', null)
           
           if (!adminError) {
-            // Successfully linked, redirect
-            redirect('/dashboard')
+            redirect(profileData.is_stag_only ? '/games' : '/dashboard')
           }
         } else if (!updateError) {
-          // Successfully linked, redirect
-          redirect('/dashboard')
+          redirect(profileData.is_stag_only ? '/games' : '/dashboard')
         }
       }
       

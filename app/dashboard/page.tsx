@@ -14,8 +14,10 @@ export default async function DashboardPage() {
     redirect('/claim-profile')
   }
 
-  // Cast profile to any to avoid TypeScript errors
   const profileData: any = profile as any
+  if (profileData.is_stag_only) {
+    redirect('/games')
+  }
   const viewAsId = await getViewAsProfileId()
   const isViewingAs = !!viewAsId
 

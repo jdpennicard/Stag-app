@@ -52,9 +52,10 @@ export default function ClaimProfileForm() {
         throw new Error(data.details || data.error || 'Failed to claim profile')
       }
 
-      // Wait a moment for the database to update, then redirect
+      const data = await res.json()
+      const isStagOnly = data.is_stag_only === true
       await new Promise(resolve => setTimeout(resolve, 500))
-      window.location.href = '/dashboard'
+      window.location.href = isStagOnly ? '/games' : '/dashboard'
     } catch (err: any) {
       setError(err.message)
     } finally {

@@ -18,6 +18,7 @@ export interface Database {
           full_name: string
           email: string | null
           is_admin: boolean
+          is_stag_only: boolean
           total_due: number
           initial_confirmed_paid: number
           created_at: string
@@ -28,6 +29,7 @@ export interface Database {
           full_name: string
           email?: string | null
           is_admin?: boolean
+          is_stag_only?: boolean
           total_due: number
           initial_confirmed_paid?: number
           created_at?: string
@@ -38,6 +40,7 @@ export interface Database {
           full_name?: string
           email?: string | null
           is_admin?: boolean
+          is_stag_only?: boolean
           total_due?: number
           initial_confirmed_paid?: number
           created_at?: string
