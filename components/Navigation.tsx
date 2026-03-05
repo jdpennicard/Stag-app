@@ -46,13 +46,19 @@ export default function Navigation({ isAdmin }: { isAdmin?: boolean }) {
         </a>
       )}
       
-      {/* All users can see Payment - Home and Stag Info Central (bottom section) */}
-      <div className="flex gap-4 items-center">
+      {/* All users can see Payment - Home, Army Man Game, Stag Info Central (bottom section) */}
+      <div className="flex gap-4 items-center flex-wrap">
         <a 
           href="/dashboard" 
           className={`text-sm ${pathname === '/dashboard' ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}
         >
           Payment - Home
+        </a>
+        <a 
+          href="/army-man" 
+          className={`text-sm ${pathname === '/army-man' ? 'text-blue-800 font-semibold' : 'text-blue-600 hover:text-blue-800'}`}
+        >
+          Army Man Game
         </a>
         <a 
           href="/stag-info" 
